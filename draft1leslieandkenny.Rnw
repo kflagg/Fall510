@@ -1,0 +1,229 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+
+
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{9in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{0in}
+\setlength{\topmargin}{-1.5cm}
+\setlength{\maxwidth}{6.5in}
+
+\title{\vspace{-2.0cm}The effect of nitrogen application time on infection and development of the Wheat Streak Mosaic Virus (WSMV)}
+\author{Leslie Gains-Germain, Kenny Flagg}
+\date{Spring 2015}
+
+\begin{document}
+<<setup, include=FALSE, cache=FALSE,echo=FALSE>>=
+require(knitr)
+opts_chunk$set(fig.width = 10, fig.height = 4, out.width = '\\linewidth',
+               out.height = '0.4\\linewidth', dev = 'pdf',
+               concordance = TRUE,
+               tidy.opts = list(width.cutoff = 60, keep.blank.line=FALSE),
+               size = 'footnotesize')
+options(replace.assign = TRUE, width = 112, digits = 3, max.print = '72',
+        show.signif.stars = FALSE)
+
+require(xtable)
+#require(foreign)
+#require(arm)
+require(tabplot)
+require(dplyr)
+require(car)
+require(lme4)
+require(ggplot2)
+require(lattice)
+require(effects)
+@
+
+<<data,echo=FALSE>>=
+# Read and set up the data
+fert2 <- read.csv('fert2.csv')
+
+# Correctly order nitrogen application levels
+fert2$n.trt <- relevel(fert2$n.application, 'FALL')
+
+# Create a row factor
+fert2$row <- with(fert2, interaction(variety, block))
+
+# Combine nitrogen and inoc/cntl
+fert2$n.status <- with(fert2, interaction(n.trt, status))
+@
+
+\maketitle
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+\noindent 
+
+\section{Statistical Experience and Assistance Needed}
+\noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently enrolled in Mixed Models. Nar has asked for our help in building a model, fitting it in R, and interpreting the results.
+
+\section{Objectives and Questions}
+\noindent Nar is interested in the effect of variety, nitrogen application time, and inoculation on the probability of virus infection in Winter Wheat. He is primarily interested in the effect of nitrogen application time, and he wants to assess evidence for all possible two and three way interactions. Nar's goal is to select the simplest possible model, and then use this model to describe the effects of the above variables. \\
+
+We address the following questions in this report:
+\begin{itemize}
+\item Is there evidence that the interaction between nitrogen application and variety differs between inoculated and control plots?
+\item Is there evidence that the nitrogen application effect varies across varieties? Is there evidence that the nitrogen application effect differs between inoculated and control?
+\item Is there evidence that the variety effect differs between inoculated and control?
+\item Conditional on the results to the above questions, how do we appropriately describe the estimated effects for variety, nitrogen application time, and inoculation on the probability of virus infection?
+\end{itemize}
+
+\section{Study Design/Data collection}
+
+Nar conducted this experiment in a MSU field at the base of the Bridger Mountains. He chose one area in the field and divided it into six $31.5$ by $27.5$ meter blocks. The blocks were then divided into five rows, with $5$ meters of space between each row. Each row was randomly assigned to a variety of Winter Wheat with separate randomizations in each block. The rows then were divided into six $1.5$ by $5$ meter plots. Each plot was randomly assigned to one of six combinations of nitrogen application time and inoculation status, with separate randomizations in each row. The combinations were fall/inoculated, fall/control, early spring/inoculated, early spring/control, late spring/inoculated, and late spring/control. All plots were planted in the {\bf FALL?} and allowed to grow over the winter. The following {\bf September?}, $30$ plants were chosen from each plot to be taken to the lab and tested for presence of the virus. The selection of the plants from each plot was not random nor technically systematic. The {\bf undergraduate?} technicians were instructed to collect a sample of plants spread evenly throughout the field. {\bf different undergraduates doing picking? picking done all at the same time? is there visual evidence of the disease?} A total of $180$ plants were collected. The plants were then sent to the lab and screened for the virus via the ELISA procedure. This is a three year study. The data are collected for the first year, and the second year plants are waiting to be analyzed in the lab {\bf describe how they are stored during waiting time}. Planting for the third year will begin this fall {\bf I think?}.  \\
+
+\noindent Plots that were assigned to the inoculated treatment had five infected plants transplanted to the middle of the plot. These plants were infected {\bf as adults?} in the greenhouse by clipping an infected leaf to the healthy plant. The Wheat Streak Mosaic Virus is transmitted by the wheat curl mite, tiny organisms that are nearly invisible to the naked eye. They can easily move from leaf to leaf on a plant, and they are transported from plant to plant by the wind  (Sloderbeck $2008$). It is our understanding that once the infected mites were introduced to the study area, they were considered to be everywhere in the air and that all plants in the field were exposed to the infected mites.
+
+\section{Recommendations}
+
+\subsection{Binomial Generalized Linear Mixed Model}
+
+\subsection{Graphical Data Exploration}
+
+<<interactionplot,echo=FALSE>>=
+qplot(x = n.trt, y = infected, geom = 'boxplot', color = status,
+      facets = .~variety, data = fert2) +
+  theme(axis.text.x = element_text(angle = 90))
+@
+
+<<heatmap,echo=FALSE>>=
+## Heatmap with meaningful ordering
+
+# Order the dataset
+#fert.ordered <- arrange(fert2, block, variety, status, n.trt)
+fert.ordered <- arrange(fert2, variety, block, status, n.trt)
+
+# Create a matrix of the arranged responses
+infected.arranged <- matrix(fert.ordered$infected, ncol = 6, byrow = TRUE)
+
+# Set up two panels, right one for a legend
+layout(t(1:2), widths = c(9, 1))
+
+# Plot the heatmap, with zeros in black and segments separating the blocks
+par(mar = c(5, 10, 6, 2))
+image(x = seq(0.5, 5.5, 1/6), y = 1:6, z = infected.arranged,
+      col = c('black', heat.colors(30)), xlab = '', ylab = '',
+      zlim = c(0, 30), yaxt = 'n', xaxt = 'n')
+title('Infection Counts', line = 4)
+segments(x0 = 1.5:4.5, y0 = 0.5, y1 = 6.5, col = 'white')
+axis(3, labels = rep(levels(fert2$block), 5),
+     at = seq(7/12, 5 + 5/12, 1/6), cex.axis = 0.75)
+axis(2, labels = levels(fert2$n.status), at = 1:6, las = 2)
+axis(1, labels = levels(fert2$variety), at = 1:5)
+
+# Legend
+par(mar = c(5, 1, 6, 2))
+image(y = -0.5:30.5, z = matrix(0:30, nrow = 1), axes = FALSE, ylab = '',
+      col = c('#000000', heat.colors(30)), zlim = c(0, 30))
+title('Legend', line = 1.5)
+axis(4)
+@
+
+<<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
+tableplot(fert.ordered, select = c(infected, variety, block, n.trt, status),
+          nBins = 30, sortCol = variety)
+@
+
+The \verb|itableplot| function in the \verb|tabplot| package is another
+useful tool for visualizing the data and identifying patterns.
+
+\subsection{Convergeance Warning Messages}
+
+<<models,cache=TRUE>>=
+glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status +
+                    (1|block/row),
+                  control = glmerControl(optimizer = 'bobyqa'),
+                  family = binomial, data = fert2)
+summary(glmm3way)
+
+glmm2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status +
+                    n.trt*status + (1|block/row),
+                    control = glmerControl(optimizer = 'bobyqa'),
+                  family = binomial, data = fert2)
+summary(glmm2way)
+
+Anova(glmm3way)
+Anova(glmm2way)
+anova(glmm2way, glmm3way)
+@
+
+<<plots1,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
+par(mfrow = c(1, 2))
+plot(resid(glmm3way) ~ predict(glmm3way), col = variety, data = fert2)
+plot(resid(glmm3way) ~ fitted(glmm3way), col = variety, data = fert2)
+legend('topright', pch = 1, col = 1:5,
+       legend = levels(fert2$variety))
+@
+
+<<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
+plot(allEffects(glmm3way), multiline = TRUE, type = 'response',
+     se=TRUE, ylim = c(0, 1), ci.style='bars', x.var = 'n.trt', rotx = 45,
+     layout = c(5, 1))
+@
+
+<<nosnms,cache=TRUE>>=
+table(fert2$infected==0,fert2$variety)
+
+noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status +
+                    (1|block/row), subset = variety != 'SNMS',
+                    control = glmerControl(optimizer = 'bobyqa'),
+                    family = binomial, data = fert2)
+summary(noSNMS3way)
+Anova(noSNMS3way)
+
+noSNMS2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status +
+                    n.trt*status + (1|block/row), subset = variety != 'SNMS',
+                    control = glmerControl(optimizer = 'bobyqa'),
+                    family = binomial, data = fert2)
+summary(noSNMS2way)
+Anova(noSNMS2way)
+
+anova(noSNMS2way, noSNMS3way)
+@
+
+<<plots3,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
+par(mfrow = c(1, 2))
+plot(resid(noSNMS3way) ~ predict(noSNMS3way), col = variety,
+     data = fert2, subset = variety!='SNMS')
+plot(resid(noSNMS3way) ~ fitted(noSNMS3way), col = variety,
+     data = fert2, subset = variety!='SNMS')
+legend('topright', pch = 1, col = 1:5,
+       legend = levels(fert2$variety))
+@
+
+\subsection{Model Refinement}
+
+\subsection{Interpretation}
+
+\section{Scope of inference}
+\noindent
+
+\section{Additional Comments}
+\noindent While very low infection rates are, in practice, a desirable
+result, they present technical and computational problems for analysis.
+In similar future studies, random sampling should be used within each
+plot and the sample size should be large enough that the researchers
+expect at least one infected leaf to be found in each plot.
+
+\section{References}
+%\noindent Ramsey, F.L., Schafer, D.W. (2013). {\it The Statistical Sleuth: A Course in Methods of Data Analysis, Third Edition}. Boston, MA: Brooks/Cole, Cengage Learning.\\
+
+\noindent Gelman, A. and Hill, J. (2007). {\it Data Analysis Using
+Regression and Multilevel/Hierarchical Models}. New York, NY: Cambridge
+University Press.\\
+
+%\noindent Philippi, Tom. "Topic 2(b) GRTS Spatial Sampling (for Monitoring)." GRTS Spatial Sampling (for Monitoring). Web. 17 Feb. 2015. \\
+%http://science.nature.nps.gov/im/datamgmt/statistics/r/advanced/grts.cfm. \\
+
+%\noindent Barbour, Christopher, and Wright, Wilson. ``Consulting Report''. Manuscript, 2014.
+
+%\noindent Ramsey, F.L., Schafer, D.W. (2013). {\it The Statistical Sleuth: A Course in Methods of Data Analysis, Third Edition}. Boston, MA: Brooks/Cole, Cengage Learning.\\
+
+\noindent Sloderbeck, J., Michaud, P., Whitworth, Robert. "Wheat Pests." CurlMite. Kansas State University, 1 May 2008. Web. 18 Sept. 2015. \verb|http://entomology.k-state.edu/extension/insect-information/crop-pests/wheat/curlmite.html|.
+
+\end{document}
