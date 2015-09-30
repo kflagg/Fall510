@@ -50,7 +50,7 @@ fert2$status2 <- relevel(fert2$status, 'INOC')
 # Create a row factor
 fert2$row <- with(fert2, interaction(variety, block))
 
-# Combine nitrogen and inoc/cntl
+# Combine nitrogen and inoc/cntl (for the heatmap labels)
 fert2$n.status <- with(fert2, interaction(n.trt, status))
 @
 
@@ -63,7 +63,8 @@ fert.sim1 <- data.frame(
   'n.application' = rep(c('FALL', 'FALL', 'EARLY SPRING', 'EARLY SPRING', 'LATE SPRING', 'LATE SPRING'), 30),
   'status' = rep(c('CNTL', 'INOC'), 90),
   'total' = rep(30, 180),
-  'infected' = sample(fert2$infected, 180, replace = TRUE))
+  'infected' = rnbinom(180, 4, 7/9))
+#  'infected' = sample(fert2$infected, 180, replace = TRUE))
 
 # Correctly order nitrogen application levels
 fert.sim1$n.trt <- relevel(fert.sim1$n.application, 'FALL')
@@ -73,6 +74,9 @@ fert.sim1$status2 <- relevel(fert.sim1$status, 'INOC')
 
 # Create a row factor
 fert.sim1$row <- with(fert.sim1, interaction(variety, block))
+
+# Combine nitrogen and inoc/cntl
+fert.sim1$n.status <- with(fert.sim1, interaction(n.trt, status))
 @
 
 \maketitle
@@ -128,7 +132,8 @@ where
 natural logarithm of the odds of infection,
 \item \(\mathbf{x_i}\) is a row vector containing indicator variables for
 the variety, nitrogen application timing, and inoculation status of
-observation \(i\), and
+observation \(i\),
+\item \(\mathbf{\beta}\) is a column vector of fixed-effect coefficients, and
 \item \(b_{0,j}\sim\mathrm{N}(0,\sigma^2_{b_0})\) and
 \(b_{1,j,k}\sim\mathrm{N}(0,\sigma^2_{b_1})\) are random effects for block
 and row, respectively.
@@ -185,16 +190,24 @@ useful tool for visualizing the data and identifying patterns.
 \subsection{Convergeance Warning Messages}
 
 <<models,cache=TRUE>>=
+glmm3way.sim <- glmer(cbind(infected, total) ~ variety*n.trt*status +
+                        (1|block/row),
+                      control = glmerControl(optimizer = 'bobyqa',
+                                             optCtrl = list(maxfun = 20000)),
+                      family = binomial, data = fert.sim1)
+summary(glmm3way.sim)
+Anova(glmm3way.sim)
+
 glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status +
                     (1|block/row),
                   control = glmerControl(optimizer = 'bobyqa'),
-                  family = binomial, data = fert.sim1)
+                  family = binomial, data = fert2)
 summary(glmm3way)
 
 glmm2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status +
                     n.trt*status + (1|block/row),
                     control = glmerControl(optimizer = 'bobyqa'),
-                  family = binomial, data = fert.sim1)
+                  family = binomial, data = fert2)
 summary(glmm2way)
 
 Anova(glmm3way)
