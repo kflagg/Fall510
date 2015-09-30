@@ -44,11 +44,14 @@ fert2$n.trt <- relevel(fert2$n.application, 'FALL')
 # If status=INOC is the most interesting case, make INOC the baseline
 fert2$status2 <- relevel(fert2$status, 'INOC')
 
+# If YSTN is the variety we want to know about the most, make it baseline
+fert2$variety2 <- relevel(fert2$variety, 'YSTN')
+
 # Create a row factor
 fert2$row <- with(fert2, interaction(variety, block))
 
 # Combine nitrogen and inoc/cntl (for the heatmap labels)
-fert2$n.status <- with(fert2, interaction(n.trt, status))
+#fert2$n.status <- with(fert2, interaction(n.trt, status))
 @
 
 <<fakedata,echo=FALSE>>=
@@ -65,9 +68,6 @@ fert.sim1 <- data.frame(
 @
 
 <<fakepre,echo=FALSE>>=
-# Create a row factor
-fert.sim1$row <- with(fert.sim1, interaction(variety, block))
-
 # Correctly order nitrogen application levels, the default is alphabetical
 fert.sim1$n.trt <- relevel(fert.sim1$n.application, 'FALL')
 
@@ -84,7 +84,7 @@ fert.sim1$status2 <- relevel(fert.sim1$status, 'INOC')
 \noindent
 
 \section{Statistical Experience and Assistance Needed}
-\noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently auditing Statistics $448$. Nar has asked for our help in building a model, fitting it in R, and interpreting the results.
+\noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently sitting in Mixed Models. Nar has asked for our help in building a model, fitting it in R, and interpreting the results.
 
 \section{Objectives and Questions}
 \noindent Nar is interested in the effect of variety, nitrogen application time, and inoculation on the probability of virus infection in Winter Wheat. He is primarily interested in the effect of nitrogen application time, and he wants to assess evidence for all possible two and three way interactions. Nar's goal is to select the simplest possible model, and then use this model to describe the effects of the above variables. \\
@@ -99,9 +99,17 @@ We address the following questions in this report:
 
 \section{Study Design/Data collection}
 
-Nar conducted this experiment in a MSU field at the base of the Bridger Mountains. He chose one area in the field and divided it into six $31.5$ by $27.5$ meter blocks. The blocks were then divided into five rows, with $5$ meters of space between each row. Each row was randomly assigned to a variety of Winter Wheat with separate randomizations in each block. The rows then were divided into six $1.5$ by $5$ meter plots. Each plot was randomly assigned to one of six combinations of nitrogen application time and inoculation status, with separate randomizations in each row. The combinations were fall/inoculated, fall/control, early spring/inoculated, early spring/control, late spring/inoculated, and late spring/control. All plots were planted in the {\bf FALL?} and allowed to grow over the winter. The following {\bf September?}, $30$ plants were chosen from each plot to be taken to the lab and tested for presence of the virus. The selection of the plants from each plot was not random nor technically systematic. The {\bf undergraduate?} technicians were instructed to collect a sample of plants spread evenly throughout the field. {\bf different undergraduates doing picking? picking done all at the same time? is there visual evidence of the disease?} A total of $180$ plants were collected. The plants were then sent to the lab and screened for the virus via the ELISA procedure. This is a three year study. The data are collected for the first year, and the second year plants are waiting to be analyzed in the lab {\bf describe how they are stored during waiting time}. Planting for the third year will begin this fall {\bf I think?}.\\
+Nar conducted this experiment in a MSU field at the base of the Bridger Mountains. He chose one area in the field and divided it into six $31.5$ by $27.5$ meter blocks. The blocks were then divided into five rows, with $5$ meters of space between each row. Each row was randomly assigned to a variety of Winter Wheat with separate randomizations in each block. Three of the chosen varieties are known to be resistant to WSMV (SNMS, TAM 112, and MACE). The pronghorn variety (PRHG) is known to be susceptible to WSMV. The last variety, Yellowstone (YLST), is a common variety in Montana, and its susceptibility to WSMV is unknown. \\
 
-\noindent Plots that were assigned to the inoculated treatment had five infected plants transplanted to the middle of the plot. These plants were infected {\bf as adults?} in the greenhouse by clipping an infected leaf to the healthy plant. The Wheat Streak Mosaic Virus is transmitted by the wheat curl mite, tiny organisms that are nearly invisible to the naked eye. They can easily move from leaf to leaf on a plant, and they are transported from plant to plant by the wind  (Sloderbeck $2008$). It is our understanding that once the infected mites were introduced to the study area, they were considered to be everywhere in the air and that all plants in the field were exposed to the infected mites.
+\noindent After assigning rows to varieties, the rows were then divided into six $1.5$ by $5$ meter plots. Each plot was randomly assigned to one of six combinations of nitrogen application time and inoculation status, with separate randomizations in each row. The combinations were fall/inoculated, fall/control, early spring/inoculated, early spring/control, late spring/inoculated, and late spring/control. \\
+
+\noindent Plots that were assigned to the inoculated treatment had five infected plants transplanted to the middle of the plot. These plants were infected in the greenhouse by clipping an infected leaf to the healthy plant. The plants are infected in the tillering stage of their life cycle at an age of about one month. The Wheat Streak Mosaic Virus is transmitted by the wheat curl mite, tiny organisms that are nearly invisible to the naked eye. They can easily move from leaf to leaf on a plant, and they are transported from plant to plant by the wind  (Sloderbeck $2008$). It is conceivable that the mites on the infected plants introduced to the inoculated plots could move to healthy plants within that plot. But, the researchers say that it is nearly impossible for the mites to move from an inoculated plot to a non-inoculated plot with such a low population of mites. Plants with the virus in non-inoculated plots are assumed to have been infected by mites in the surrounding environment. \\
+
+\noindent All plots were planted in mid September and allowed to grow over the winter. The following spring and summer, $30$ leaves were picked from different plants within each plot and taken to the lab to be tested for presence of the virus. The selection of the leaves from each plot was not random nor technically systematic. The six technicians were instructed to collect a sample of plants spread evenly throughout the plot. There is no possibility of visual bias because the symptoms are not heavy enough in this area of Montana for the plants to show clear visual evidence of the virus. \\
+
+\noindent The sampling was all done in one day on two occasions. The first sampling date occured at the end of May when the plants were in the tillering stage, and the second sampling date occured in early July when plants were in the flowering stage. In the first year of the study, $2013-2014$, all plots were sampled on both dates. In the second year of the study, only plots with susceptible varieties were sampled on the first date, and all plots were sampled on the second date The advice given in this report is only for analysis of the data collected on the second date in July. After the leaves were picked in the field, they were sent to the lab and screened for the virus via the ELISA procedure. The data are collected and organized in a spreadsheet for the first year. The second year leaves are currently stored in ziploc bags in the freezer and are waiting to be analyzed in the lab. The researchers do not expect this waiting period to affect their ability to detect the virus. \\
+
+\noindent This is a three year study, and planting for the third year of the study is currently taking place. Each year, the assignment of varieties to rows and treatments to plots is re-randomized. Furthermore, planting takes place in the gaps between the plots from the previous year.
 
 \section{Recommendations}
 
@@ -137,7 +145,7 @@ and row, respectively.
 
 \noindent The assumptions for this model are that plants within a plot
 are independent and have the same probability of being infected, and
-that plots within a row are endependent of each other.
+that plots within a row are independent of each other.
 
 \noindent Advantages of the Binomial GLMM include:
 \begin{itemize}
@@ -175,7 +183,7 @@ inoculation status is with boxplots of infection counts for each
 combination of factor levels. The \verb|qplot| function in the
 \verb|ggplot2| package is a simple way to do this.
 
-\begin{figure}
+\begin{figure}[b]
 \caption{Example interaction plot using \texttt{qplot}.}
 <<interactionplot,echo=FALSE,message=FALSE>>=
 require(ggplot2)
@@ -196,12 +204,29 @@ for patterns of zeros. Figure 2 shows an example using simulated data.
 The most serious problems will come from the zeros, so we chose a contrasting
 color (black) for plots with infection counts of 0.
 
-\begin{figure}
+\noindent Any treatment or variety with many black squares is a reason
+for concern. In the example, all but one of the inoculated fall-application
+plots for Var1 had counts of 0. The software will have difficulty estimating
+the the three-way interaction involving fall nitrogen application and
+variety 1.
+
+\noindent If a treatment has many zeros across all varieties or a variety
+has many zeros, Nar should consider whether he has reason to believe
+that treatment or variety has qualitative differences from the others
+that would cause it to have a much lower infrection rate. These data would
+be considered as coming from a different population than the data with
+fewer zeros. \textbf{If and only if it is justified}, Nar could omit all
+of the data for this treatment or variety when fitting the model. The scope
+of inference for this model must then be limited to varieties and
+treatments that have a nonzero infection rate. A separate analysis would
+be needed for more resistant population.
+
+\begin{figure}[b]
 \caption{Example heatmap visualization for identifying patterns of zeros.}
 <<heatmap,echo=FALSE,message=FALSE>>=
 ## Heatmap with meaningful ordering
 
-# Order the dataset, using the arrange() function from the dplyr package
+# Order the dataset, using the arrange function from the dplyr package
 require(dplyr)
 fert.ordered <- arrange(fert.sim1, variety, block, status, n.trt)
 
@@ -220,7 +245,9 @@ image(z = infected.arranged, y = 1:6,
 
       # Use black for 0, and use heatmap colors (red-orange-yellow-white) for 1 to 30
       col = c('black', heat.colors(30)), zlim = c(0, 30),
-      xlab = '', ylab = '', yaxt = 'n', xaxt = 'n') # Don't automatically create axes or labels
+
+      # Don't automatically create axes or labels
+      xlab = '', ylab = '', yaxt = 'n', xaxt = 'n')
 
 # Use white line segments to visually separate the varieties
 segments(x0 = 1.5:4.5, y0 = 0.5, y1 = 6.5, col = 'white')
@@ -246,7 +273,7 @@ axis(4)
 \noindent If information about the physical layout of the field is
 available, it would be possible to construct a similar heatmap to look
 for spatial patterns. If correlation between nearby plots is seen,
-this should be included in the model.
+the model should be modified to account for this.
 
 \noindent Another option for examining the data graphically is the
 \verb|itableplot| function in the \verb|tabplot| package. This is a
@@ -256,57 +283,55 @@ patterns.
 \begin{figure}
 \caption{Example \texttt{itableplot} output.}
 <<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
-tableplot(fert.ordered, select = c(infected, variety, block, n.trt, status),
+tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
           nBins = 30, sortCol = variety)
 @
 \end{figure}
 
 \subsection{Model Fitting and Possible Issues}
-\noindent The
-<<models1,warning=FALSE,results='hide',cache=TRUE>>=
-glmm3way.sim <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
-                      control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
-                      family = binomial, data = fert.sim1)
+
+The following code will fit the three-way interaction model:
+
+<<startingmodel,warning=FALSE,results='hide',cache=TRUE>>=
+glm3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+               family = quasibinomial, data = fert.sim1)
 @
 
-<<models2,warning=FALSE,results='hide',cache=TRUE>>=
-noVar1.sim <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
-                      control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
-                      family = binomial, data = fert.sim1, subset = variety!='Var1')
+If it is decided that certain observations come from an extremely
+resistant population and can be omited from the current analysis.
+
+<<novar1,warning=FALSE,results='hide',cache=TRUE>>=
+noVar1 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+              family = quasibinomial, data = fert.sim1, subset = variety!='Var1')
 @
 
-<<models3,warning=FALSE,results='hide',cache=TRUE>>=
-glmm3way.sim <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
-                      control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
-                      family = binomial, data = fert.sim1)
+If there is no interest in comparing between inoculated plots and
+control plots, separate models could be fit.
+
+<<separatemodels,warning=FALSE,results='hide',cache=TRUE>>=
+onlyINOC <- glm(cbind(infected, total) ~ block/variety + variety*n.trt,
+                family = quasibinomial, data = fert.sim1, subset = status=='INOC')
+
+onlyCNTL <- glm(cbind(infected, total) ~ block/variety + variety*n.trt,
+                family = quasibinomial, data = fert.sim1, subset = status=='CNTL')
 @
 
-<<models4,echo=FALSE,warning=FALSE,results='hide',cache=TRUE>>=
-glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
-                  control = glmerControl(optimizer = 'bobyqa'),
-                  family = binomial, data = fert2)
-#summary(glmm3way)
+<<models5,echo=FALSE,warning=FALSE,results='hide',cache=TRUE>>=
+glm3way2 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+                family = binomial, data = fert2)
+summary(glm3way2)
 
-glmm2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status2 +
-                    n.trt*status2 + (1|block/row),
-                    control = glmerControl(optimizer = 'bobyqa'),
-                  family = binomial, data = fert2)
-#summary(glmm2way)
+glm2way2 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt + variety*status2 + n.trt*status2,
+                family = quasibinomial, data = fert2)
+summary(glm2way2)
 
-#Anova(glmm3way)
-#Anova(glmm2way)
-#anova(glmm2way, glmm3way)
+Anova(glm3way2, test.statistic = 'F')
+Anova(glm2way2, test.statistic = 'F')
+Anova(glm2way2, glm3way2, test.statistic = 'F')
+anova(glm2way2, glm3way2)
 @
 
-<<plots1,eval=FALSE,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
-par(mfrow = c(1, 2))
-plot(resid(glmm3way) ~ predict(glmm3way), col = variety, data = fert.sim1)
-plot(resid(glmm3way) ~ fitted(glmm3way), col = variety, data = fert.sim1)
-legend('topright', pch = 1, col = 1:5,
-       legend = levels(fert.sim1$variety))
-@
-
-<<nosnms,cache=TRUE>>=
+<<nosnms,echo=FALSE,warning=FALSE,results='hide',cache=FALSE>>=
 table(fert2$infected==0,fert2$variety)
 
 noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
@@ -340,9 +365,10 @@ legend('topright', pch = 1, col = 1:5,
 \caption{The fitted model can be nicely summarized with plots from the \texttt{effects} package.}
 <<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
 require(effects)
-plot(allEffects(glmm3way.sim), multiline = TRUE, type = 'response', se = TRUE,
-     ci.style='bars', x.var = 'n.trt', rotx = 45, layout = c(5, 1),
-     main = 'Variety:Treatment:Inoculation Effects Plot',
+plot(Effect(c('variety','n.trt','status2'), glm3way),
+     multiline = TRUE, type = 'response', se = TRUE, ci.style='bars',
+     x.var = 'n.trt', rotx = 45, layout = c(5, 1),
+     main = 'Variety/Treatment/Inoculation Effects Plot',
      xlab = 'Nitrogen Application Date', ylab = 'Infection Probability',
      key.args = list(title = 'Inoculation Status'))
 @
@@ -350,10 +376,39 @@ plot(allEffects(glmm3way.sim), multiline = TRUE, type = 'response', se = TRUE,
 
 \subsection{Model Refinement}
 
+Recommend to use Chi Squared tests or F-tests? I think F-tests but not exactly sure what the F-test is giving or where its coming from.
+
+Correct df? different from lme and glmer...
+
+<<nosnms3way, echo=FALSE>>=
+Anova(noSNMS3way)
+anova(noSNMS3way)
+#1-pf(2.29, 6, 118)
+
+AIC(noSNMS3way, noSNMS2way)
+anova(noSNMS3way, noSNMS2way)
+
+#lme model to get correct df for f tests
+#why is den df now 100?
+require(nlme, quietly=T)
+noSNMS3waylme <- lme(infected ~ variety*n.trt*status,
+                    random=~1|block/row, method="ML",
+                     data = subset(fert2, variety != "SNMS"))
+
+glm3way <- glm(cbind(infected, total) ~ variety*n.trt*status+row, family="binomial", data=subset(fert2, variety != "SNMS"))
+@
+
+explain: if no evidence of a three way interaction what can you do, how to continue selection.
+
 \subsection{Interpretation}
 
+Explain how to interpret with three way interaction (essentially interpret two way interaction for each inoculated and control)
+
 \section{Scope of inference}
-\noindent
+
+The field where the study took place was not randomly selected from a larger population of fields, so inference from this study does not extend beyond the field at the base of the Bridger mountains where the experiment was conducted. There are potential confounding factors in this field that may not be present in other fields around Montana. For example, the soil in this specific field may have high starting levels of nitrogen from previous studies that could affect the observed relationship between nitrogen application time and probability of virus infection. If inference beyond the study field is desired, it would be necessary to justify that the study field is similar to other wheat fields in the population of interest in terms of soil composition and all other variables. \\
+
+\noindent Plants were randomly assigned to treatments, so it is justified to infer that the observed infection rates in this field are caused by the timing of the nitrogen application and the inoculation status of the plots. A causal relationship {\it cannot} be inferred between variety and virus infection, however, because plants were not randomly assigned to varieties.
 
 \section{Additional Comments}
 \noindent While very low infection rates are, in practice, a desirable
@@ -368,9 +423,9 @@ included the code we used to create the output for this report. Note
 that we used a simulated dataset.
 
 \subsection{Data Preprocessing}
-\noindent We created variable with a unique level for each row, since row
-it was not included in the dataset. We also changed the baseline levels
-of \verb|n.application| and \verb|status|.
+We changed the baseline levels of \verb|n.application| and \verb|status|.
+If the YLST variety is the primary variety of interest, the \verb|relevel|
+function could be used on the \verb|variety| variable the same way.
 <<fakepre,eval=FALSE>>=
 @
 
@@ -402,8 +457,9 @@ University Press.\\
 
 %\noindent Barbour, Christopher, and Wright, Wilson. ``Consulting Report''. Manuscript, 2014.
 
-%\noindent Ramsey, F.L., Schafer, D.W. (2013). {\it The Statistical Sleuth: A Course in Methods of Data Analysis, Third Edition}. Boston, MA: Brooks/Cole, Cengage Learning.\\
+\noindent Ramsey, F.L., Schafer, D.W. (2013). {\it The Statistical Sleuth: A Course in Methods of Data Analysis, Third Edition}. Boston, MA: Brooks/Cole, Cengage Learning.\\
 
-\noindent Sloderbeck, J., Michaud, P., Whitworth, Robert. "Wheat Pests." CurlMite. Kansas State University, 1 May 2008. Web. 18 Sept. 2015. \verb|http://entomology.k-state.edu/extension/insect-information/crop-pests/wheat/curlmite.html|.
+\noindent Sloderbeck, J., Michaud, P., Whitworth, Robert. "Wheat Pests." CurlMite. Kansas State University, 1 May 2008. Web. 18 Sept. 2015.\\
+\verb|http://entomology.k-state.edu/extension/insect-information/crop-pests/wheat/curlmite.html|.
 
 \end{document}
