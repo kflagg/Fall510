@@ -29,12 +29,9 @@ require(xtable)
 #require(foreign)
 #require(arm)
 require(tabplot)
-require(dplyr)
 require(car)
 require(lme4)
-require(ggplot2)
 require(lattice)
-require(effects)
 @
 
 <<data,echo=FALSE>>=
@@ -65,18 +62,17 @@ fert.sim1 <- data.frame(
   'total' = rep(30, 180),
   'infected' = rnbinom(180, 4, 7/9))
 #  'infected' = sample(fert2$infected, 180, replace = TRUE))
+@
 
-# Correctly order nitrogen application levels
+<<fakepre,echo=FALSE>>=
+# Create a row factor
+fert.sim1$row <- with(fert.sim1, interaction(variety, block))
+
+# Correctly order nitrogen application levels, the default is alphabetical
 fert.sim1$n.trt <- relevel(fert.sim1$n.application, 'FALL')
 
 # If status=INOC is the most interesting case, make INOC the baseline
 fert.sim1$status2 <- relevel(fert.sim1$status, 'INOC')
-
-# Create a row factor
-fert.sim1$row <- with(fert.sim1, interaction(variety, block))
-
-# Combine nitrogen and inoc/cntl
-fert.sim1$n.status <- with(fert.sim1, interaction(n.trt, status))
 @
 
 \maketitle
@@ -85,7 +81,7 @@ fert.sim1$n.status <- with(fert.sim1, interaction(n.trt, status))
 \newpage
 
 \section{Introduction}
-\noindent 
+\noindent
 
 \section{Statistical Experience and Assistance Needed}
 \noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently auditing Statistics $448$. Nar has asked for our help in building a model, fitting it in R, and interpreting the results.
@@ -111,14 +107,14 @@ Nar conducted this experiment in a MSU field at the base of the Bridger Mountain
 
 \subsection{Binomial Generalized Linear Mixed Model}
 
-Because the response variable is a binomial count, and because the design
-includes random assignment to rows within blocks, a binomial generalized
-linear mixed model is appropriate. This model will estimate the probability
-of infection for each \verb|variety:treatment:status| combination while
-controlling for differences between blocks and between
-rows in the same block.
+\noindent Because the response variable is a Binomial count, and because
+the design includes random assignment of variety to rows within blocks,
+a binomial generalized linear mixed model is appropriate. This model
+will estimate the probability of infection for each
+\verb|variety:treatment:status| combination while controlling for
+differences between blocks and between rows in the same block.
 
-The model is
+\noindent The model is
 $$
 y_i\sim\mathrm{Binomial}(30, p_i),
 $$
@@ -127,7 +123,7 @@ $$
 $$
 where
 \begin{itemize}
-\item \(p_i\) is the probability of infection for the \(i\)th observation,
+\item \(p_i\) is the probability of infection in the \(i\)th plot,
 \item \(\mathrm{logit}(p_i)=\log\left(\dfrac{p_i}{1-p_i}\right)\) is the
 natural logarithm of the odds of infection,
 \item \(\mathbf{x_i}\) is a row vector containing indicator variables for
@@ -139,18 +135,74 @@ observation \(i\),
 and row, respectively.
 \end{itemize}
 
+\noindent The assumptions for this model are that plants within a plot
+are independent and have the same probability of being infected, and
+that plots within a row are endependent of each other.
+
+\noindent Advantages of the Binomial GLMM include:
+\begin{itemize}
+\item It estimates and controls for variability between rows and blocks.
+\item It avoids confounding variety effects with row effects and correctly
+models the rows and nested within blocks.
+\item Random effects can explain extra variation beyond what the
+fixed-effect Binomial GLM can account for.
+\end{itemize}
+
+\noindent Disadvantages of this model include:
+\begin{itemize}
+\item It must be fit by numerically maximizing the likelihood with an
+iterative algorithm. Including a large number of parameters (such as
+third-order interaction coefficients) can cause the algorithm to fail
+to converge.
+\item The domain of the logit function is \((0, 1)\). If a large proportion
+of the data are zeros, meaning an infection probability is near 0, the
+algorithm will have difficulty estimating the coefficients. In this
+situation, estimates may be unreliable or the algorithm may not converge.
+\item We are not aware of any tools that can fit a Binomial GLMM with
+overdispersion. If there are additional sources of variation that the
+model does not account for, the standard error estimates will be too small.
+\end{itemize}
+
 \subsection{Graphical Data Exploration}
 
-<<interactionplot,echo=FALSE>>=
+\noindent Before fitting a model, we recommend starting by creating plots
+for exploratory data analysis. This is useful for seeing which interactions
+may be present, and for identifying patterns that may represent violations
+of assumptions or potential computational problems.
+
+\noindent A good way to visually compare varieties, treatments, and
+inoculation status is with boxplots of infection counts for each
+combination of factor levels. The \verb|qplot| function in the
+\verb|ggplot2| package is a simple way to do this.
+
+\begin{figure}
+\caption{Example interaction plot using \texttt{qplot}.}
+<<interactionplot,echo=FALSE,message=FALSE>>=
+require(ggplot2)
 qplot(x = n.trt, y = infected, geom = 'boxplot', color = status,
       facets = .~variety, data = fert.sim1) +
   theme(axis.text.x = element_text(angle = 90))
 @
+\end{figure}
 
-<<heatmap,echo=FALSE>>=
+\noindent We noticed that infection counts of 0 were recored in 67 of the
+180 plots in Nar's dataset. This is a large fraction of the data; if the
+distribution of these zeros is related to the variables in the model then
+it may be impossible to estimate coefficients for factor levels where
+infection rates are nearly zero.
+
+\noindent We recommend sorting the data and creating a heatmap to look
+for patterns of zeros. Figure 2 shows an example using simulated data.
+The most serious problems will come from the zeros, so we chose a contrasting
+color (black) for plots with infection counts of 0.
+
+\begin{figure}
+\caption{Example heatmap visualization for identifying patterns of zeros.}
+<<heatmap,echo=FALSE,message=FALSE>>=
 ## Heatmap with meaningful ordering
 
-# Order the dataset
+# Order the dataset, using the arrange() function from the dplyr package
+require(dplyr)
 fert.ordered <- arrange(fert.sim1, variety, block, status, n.trt)
 
 # Create a matrix of the arranged responses
@@ -160,62 +212,93 @@ infected.arranged <- matrix(fert.ordered$infected, ncol = 6, byrow = TRUE)
 layout(t(1:2), widths = c(9, 1))
 
 # Plot the heatmap, with zeros in black and segments separating the blocks
-par(mar = c(5, 10, 6, 2))
-image(x = seq(0.5, 5.5, 1/6), y = 1:6, z = infected.arranged,
-      col = c('black', heat.colors(30)), xlab = '', ylab = '',
-      zlim = c(0, 30), yaxt = 'n', xaxt = 'n')
-title('Infection Counts', line = 4)
+par(mar = c(5, 10, 6, 2)) # Set big margins
+image(z = infected.arranged, y = 1:6,
+
+      # Variety blocks are 1 unit wide, centered at 0.5, 1.5, etc
+      x = seq(0.5, 5.5, 1/6),
+
+      # Use black for 0, and use heatmap colors (red-orange-yellow-white) for 1 to 30
+      col = c('black', heat.colors(30)), zlim = c(0, 30),
+      xlab = '', ylab = '', yaxt = 'n', xaxt = 'n') # Don't automatically create axes or labels
+
+# Use white line segments to visually separate the varieties
 segments(x0 = 1.5:4.5, y0 = 0.5, y1 = 6.5, col = 'white')
-axis(3, labels = rep(levels(fert.ordered$block), 5),
-     at = seq(7/12, 5 + 5/12, 1/6), cex.axis = 0.75)
-axis(2, labels = levels(fert.ordered$n.status), at = 1:6, las = 2)
+
+# Place a title at the top, and label Varieties, treatment:status levels, and blocks around the image
+title('Infection Counts', line = 4)
+axis(3, labels = rep(levels(fert.ordered$block), 5), cex.axis = 0.75,
+
+     # Each block is plotted in a column with width 1/6, so put the labels in the middle
+     at = seq(7/12, 5 + 5/12, 1/6))
+axis(2, labels = levels(with(fert.ordered, interaction(n.trt, status))), at = 1:6, las = 2)
 axis(1, labels = levels(fert.ordered$variety), at = 1:5)
 
 # Legend
 par(mar = c(5, 1, 6, 2))
-image(y = -0.5:30.5, z = matrix(0:30, nrow = 1), axes = FALSE, ylab = '',
+image(y = seq(-0.5, 30.5, 1), z = matrix(0:30, nrow = 1), axes = FALSE, ylab = '',
       col = c('#000000', heat.colors(30)), zlim = c(0, 30))
 title('Legend', line = 1.5)
 axis(4)
 @
+\end{figure}
 
+\noindent If information about the physical layout of the field is
+available, it would be possible to construct a similar heatmap to look
+for spatial patterns. If correlation between nearby plots is seen,
+this should be included in the model.
+
+\noindent Another option for examining the data graphically is the
+\verb|itableplot| function in the \verb|tabplot| package. This is a
+useful interactive tool for visualizing large datasets and identifying
+patterns.
+
+\begin{figure}
+\caption{Example \texttt{itableplot} output.}
 <<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
 tableplot(fert.ordered, select = c(infected, variety, block, n.trt, status),
           nBins = 30, sortCol = variety)
 @
+\end{figure}
 
-The \verb|itableplot| function in the \verb|tabplot| package is another
-useful tool for visualizing the data and identifying patterns.
-
-\subsection{Convergeance Warning Messages}
-
-<<models,cache=TRUE>>=
-glmm3way.sim <- glmer(cbind(infected, total) ~ variety*n.trt*status +
-                        (1|block/row),
-                      control = glmerControl(optimizer = 'bobyqa',
-                                             optCtrl = list(maxfun = 20000)),
+\subsection{Model Fitting and Possible Issues}
+\noindent The
+<<models1,warning=FALSE,results='hide',cache=TRUE>>=
+glmm3way.sim <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
+                      control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
                       family = binomial, data = fert.sim1)
-summary(glmm3way.sim)
-Anova(glmm3way.sim)
-
-glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status +
-                    (1|block/row),
-                  control = glmerControl(optimizer = 'bobyqa'),
-                  family = binomial, data = fert2)
-summary(glmm3way)
-
-glmm2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status +
-                    n.trt*status + (1|block/row),
-                    control = glmerControl(optimizer = 'bobyqa'),
-                  family = binomial, data = fert2)
-summary(glmm2way)
-
-Anova(glmm3way)
-Anova(glmm2way)
-anova(glmm2way, glmm3way)
 @
 
-<<plots1,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
+<<models2,warning=FALSE,results='hide',cache=TRUE>>=
+noVar1.sim <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
+                      control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
+                      family = binomial, data = fert.sim1, subset = variety!='Var1')
+@
+
+<<models3,warning=FALSE,results='hide',cache=TRUE>>=
+glmm3way.sim <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
+                      control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
+                      family = binomial, data = fert.sim1)
+@
+
+<<models4,echo=FALSE,warning=FALSE,results='hide',cache=TRUE>>=
+glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
+                  control = glmerControl(optimizer = 'bobyqa'),
+                  family = binomial, data = fert2)
+#summary(glmm3way)
+
+glmm2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status2 +
+                    n.trt*status2 + (1|block/row),
+                    control = glmerControl(optimizer = 'bobyqa'),
+                  family = binomial, data = fert2)
+#summary(glmm2way)
+
+#Anova(glmm3way)
+#Anova(glmm2way)
+#anova(glmm2way, glmm3way)
+@
+
+<<plots1,eval=FALSE,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
 par(mfrow = c(1, 2))
 plot(resid(glmm3way) ~ predict(glmm3way), col = variety, data = fert.sim1)
 plot(resid(glmm3way) ~ fitted(glmm3way), col = variety, data = fert.sim1)
@@ -223,24 +306,18 @@ legend('topright', pch = 1, col = 1:5,
        legend = levels(fert.sim1$variety))
 @
 
-<<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
-plot(allEffects(glmm3way), multiline = TRUE, type = 'response',
-     se=TRUE, ylim = c(0, 1), ci.style='bars', x.var = 'n.trt', rotx = 45,
-     layout = c(5, 1))
-@
-
 <<nosnms,cache=TRUE>>=
 table(fert2$infected==0,fert2$variety)
 
-noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status +
+noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
                     (1|block/row), subset = variety != 'SNMS',
                     control = glmerControl(optimizer = 'bobyqa'),
                     family = binomial, data = fert2)
 summary(noSNMS3way)
 Anova(noSNMS3way)
 
-noSNMS2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status +
-                    n.trt*status + (1|block/row), subset = variety != 'SNMS',
+noSNMS2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status2 +
+                    n.trt*status2 + (1|block/row), subset = variety != 'SNMS',
                     control = glmerControl(optimizer = 'bobyqa'),
                     family = binomial, data = fert2)
 summary(noSNMS2way)
@@ -249,7 +326,7 @@ Anova(noSNMS2way)
 anova(noSNMS2way, noSNMS3way)
 @
 
-<<plots3,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
+<<plots3,eval=FALSE,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
 par(mfrow = c(1, 2))
 plot(resid(noSNMS3way) ~ predict(noSNMS3way), col = variety,
      data = fert2, subset = variety!='SNMS')
@@ -258,6 +335,18 @@ plot(resid(noSNMS3way) ~ fitted(noSNMS3way), col = variety,
 legend('topright', pch = 1, col = 1:5,
        legend = levels(fert2$variety))
 @
+
+\begin{figure}
+\caption{The fitted model can be nicely summarized with plots from the \texttt{effects} package.}
+<<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
+require(effects)
+plot(allEffects(glmm3way.sim), multiline = TRUE, type = 'response', se = TRUE,
+     ci.style='bars', x.var = 'n.trt', rotx = 45, layout = c(5, 1),
+     main = 'Variety:Treatment:Inoculation Effects Plot',
+     xlab = 'Nitrogen Application Date', ylab = 'Infection Probability',
+     key.args = list(title = 'Inoculation Status'))
+@
+\end{figure}
 
 \subsection{Model Refinement}
 
@@ -272,6 +361,34 @@ result, they present technical and computational problems for analysis.
 In similar future studies, random sampling should be used within each
 plot and the sample size should be large enough that the researchers
 expect at least one infected leaf to be found in each plot.
+
+\section{Appendix: R Code}
+\noindent Since Nar expressed a desire for assistance with R, we have
+included the code we used to create the output for this report. Note
+that we used a simulated dataset.
+
+\subsection{Data Preprocessing}
+\noindent We created variable with a unique level for each row, since row
+it was not included in the dataset. We also changed the baseline levels
+of \verb|n.application| and \verb|status|.
+<<fakepre,eval=FALSE>>=
+@
+
+\subsection{\texttt{qplot}}
+<<interactionplot,eval=FALSE>>=
+@
+
+\subsection{Heatmap}
+Nar only needs to change \verb|fert.sim1| inside the \verb|arrange| call
+to the name of his data frame. The rest of this code is self-contained and
+will create the heatmap with appropriate labels for varieties, treatments,
+and blocks.
+<<heatmap,eval=FALSE>>=
+@
+
+\subsection{Summary Effects Plot}
+<<plots2,eval=FALSE>>=
+@
 
 \section{References}
 %\noindent Ramsey, F.L., Schafer, D.W. (2013). {\it The Statistical Sleuth: A Course in Methods of Data Analysis, Third Edition}. Boston, MA: Brooks/Cole, Cengage Learning.\\
