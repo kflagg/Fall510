@@ -32,12 +32,11 @@ require(tabplot)
 require(car)
 require(lme4)
 require(lattice)
-require(nlme)
 @
 
 <<data,echo=FALSE>>=
 # Read and set up the data
-fert2 <- read.csv("fert2.csv")
+fert2 <- read.csv('fert2.csv')
 
 # Correctly order nitrogen application levels
 fert2$n.trt <- relevel(fert2$n.application, 'FALL')
@@ -45,11 +44,14 @@ fert2$n.trt <- relevel(fert2$n.application, 'FALL')
 # If status=INOC is the most interesting case, make INOC the baseline
 fert2$status2 <- relevel(fert2$status, 'INOC')
 
+# If YSTN is the variety we want to know about the most, make it baseline
+fert2$variety2 <- relevel(fert2$variety, 'YSTN')
+
 # Create a row factor
 fert2$row <- with(fert2, interaction(variety, block))
 
 # Combine nitrogen and inoc/cntl (for the heatmap labels)
-fert2$n.status <- with(fert2, interaction(n.trt, status))
+#fert2$n.status <- with(fert2, interaction(n.trt, status))
 @
 
 <<fakedata,echo=FALSE>>=
@@ -66,9 +68,6 @@ fert.sim1 <- data.frame(
 @
 
 <<fakepre,echo=FALSE>>=
-# Create a row factor
-fert.sim1$row <- with(fert.sim1, interaction(variety, block))
-
 # Correctly order nitrogen application levels, the default is alphabetical
 fert.sim1$n.trt <- relevel(fert.sim1$n.application, 'FALL')
 
@@ -214,18 +213,20 @@ variety 1.
 \noindent If a treatment has many zeros across all varieties or a variety
 has many zeros, Nar should consider whether he has reason to believe
 that treatment or variety has qualitative differences from the others
-that would cause it to have a much lower infrection rate. \textbf{If and
-only if it is justified}, Nar could omit all of the data for this treatment
-or variety when fitting the model. The scope of inference for this model
-must then be limited to varieties and treatments that have a nonzero
-infection rate.
+that would cause it to have a much lower infrection rate. These data would
+be considered as coming from a different population than the data with
+fewer zeros. \textbf{If and only if it is justified}, Nar could omit all
+of the data for this treatment or variety when fitting the model. The scope
+of inference for this model must then be limited to varieties and
+treatments that have a nonzero infection rate. A separate analysis would
+be needed for more resistant population.
 
 \begin{figure}[b]
 \caption{Example heatmap visualization for identifying patterns of zeros.}
 <<heatmap,echo=FALSE,message=FALSE>>=
 ## Heatmap with meaningful ordering
 
-# Order the dataset, using the arrange() function from the dplyr package
+# Order the dataset, using the arrange function from the dplyr package
 require(dplyr)
 fert.ordered <- arrange(fert.sim1, variety, block, status, n.trt)
 
@@ -244,7 +245,9 @@ image(z = infected.arranged, y = 1:6,
 
       # Use black for 0, and use heatmap colors (red-orange-yellow-white) for 1 to 30
       col = c('black', heat.colors(30)), zlim = c(0, 30),
-      xlab = '', ylab = '', yaxt = 'n', xaxt = 'n') # Don't automatically create axes or labels
+
+      # Don't automatically create axes or labels
+      xlab = '', ylab = '', yaxt = 'n', xaxt = 'n')
 
 # Use white line segments to visually separate the varieties
 segments(x0 = 1.5:4.5, y0 = 0.5, y1 = 6.5, col = 'white')
@@ -270,17 +273,17 @@ axis(4)
 \noindent If information about the physical layout of the field is
 available, it would be possible to construct a similar heatmap to look
 for spatial patterns. If correlation between nearby plots is seen,
-the model should be modyfied to account for this.
+the model should be modified to account for this.
 
 \noindent Another option for examining the data graphically is the
 \verb|itableplot| function in the \verb|tabplot| package. This is a
 useful interactive tool for visualizing large datasets and identifying
 patterns.
 
-\begin{figure}[b]
+\begin{figure}
 \caption{Example \texttt{itableplot} output.}
 <<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
-tableplot(fert.ordered, select = c(infected, variety, block, n.trt, status),
+tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
           nBins = 30, sortCol = variety)
 @
 \end{figure}
@@ -289,57 +292,43 @@ tableplot(fert.ordered, select = c(infected, variety, block, n.trt, status),
 
 The following code will fit the three-way interaction model:
 
-<<models1,warning=FALSE,results='hide',cache=TRUE>>=
-glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
-                  control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
-                  family = binomial, data = fert.sim1)
+<<startingmodel,warning=FALSE,results='hide',cache=TRUE>>=
+glm3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+               family = quasibinomial, data = fert.sim1)
 @
 
-We noticed that the SNMS variety had 27 out of 36 counts that were zeros.
-Code like the following
+If it is decided that certain observations come from an extremely
+resistant population and can be omited from the current analysis.
 
-<<models2,warning=FALSE,results='hide',cache=TRUE>>=
-noVar1 <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
-                control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
-                family = binomial, data = fert.sim1, subset = variety!='Var1')
+<<novar1,warning=FALSE,results='hide',cache=TRUE>>=
+noVar1 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+              family = quasibinomial, data = fert.sim1, subset = variety!='Var1')
 @
 
 If there is no interest in comparing between inoculated plots and
 control plots, separate models could be fit.
 
-<<models3,warning=FALSE,results='hide',cache=TRUE>>=
-onlyINOC <- glmer(cbind(infected, total) ~ variety*n.trt + (1|block/row),
-                  control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
-                  family = binomial, data = fert.sim1, subset = status=='INOC')
+<<separatemodels,warning=FALSE,results='hide',cache=TRUE>>=
+onlyINOC <- glm(cbind(infected, total) ~ block/variety + variety*n.trt,
+                family = quasibinomial, data = fert.sim1, subset = status=='INOC')
 
-onlyCNTL <- glmer(cbind(infected, total) ~ variety*n.trt + (1|block/row),
-                  control = glmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 20000)),
-                  family = binomial, data = fert.sim1, subset = status=='CNTL')
+onlyCNTL <- glm(cbind(infected, total) ~ block/variety + variety*n.trt,
+                family = quasibinomial, data = fert.sim1, subset = status=='CNTL')
 @
 
 <<models5,echo=FALSE,warning=FALSE,results='hide',cache=TRUE>>=
-glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/row),
-                  control = glmerControl(optimizer = 'bobyqa'),
-                  family = binomial, data = fert2)
-#summary(glmm3way)
+glm3way2 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+                family = binomial, data = fert2)
+summary(glm3way2)
 
-glmm2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status2 +
-                    n.trt*status2 + (1|block/row),
-                    control = glmerControl(optimizer = 'bobyqa'),
-                  family = binomial, data = fert2)
-#summary(glmm2way)
+glm2way2 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt + variety*status2 + n.trt*status2,
+                family = quasibinomial, data = fert2)
+summary(glm2way2)
 
-#Anova(glmm3way)
-#Anova(glmm2way)
-#anova(glmm2way, glmm3way)
-@
-
-<<plots1,eval=FALSE,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
-par(mfrow = c(1, 2))
-plot(resid(glmm3way) ~ predict(glmm3way), col = variety, data = fert.sim1)
-plot(resid(glmm3way) ~ fitted(glmm3way), col = variety, data = fert.sim1)
-legend('topright', pch = 1, col = 1:5,
-       legend = levels(fert.sim1$variety))
+Anova(glm3way2, test.statistic = 'F')
+Anova(glm2way2, test.statistic = 'F')
+Anova(glm2way2, glm3way2, test.statistic = 'F')
+anova(glm2way2, glm3way2)
 @
 
 <<nosnms,echo=FALSE,warning=FALSE,results='hide',cache=FALSE>>=
@@ -376,31 +365,14 @@ legend('topright', pch = 1, col = 1:5,
 \caption{The fitted model can be nicely summarized with plots from the \texttt{effects} package.}
 <<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
 require(effects)
-plot(allEffects(glmm3way.sim), multiline = TRUE, type = 'response', se = TRUE,
-     ci.style='bars', x.var = 'n.trt', rotx = 45, layout = c(5, 1),
-     main = 'Variety:Treatment:Inoculation Effects Plot',
+plot(Effect(c('variety','n.trt','status2'), glm3way),
+     multiline = TRUE, type = 'response', se = TRUE, ci.style='bars',
+     x.var = 'n.trt', rotx = 45, layout = c(5, 1),
+     main = 'Variety/Treatment/Inoculation Effects Plot',
      xlab = 'Nitrogen Application Date', ylab = 'Infection Probability',
      key.args = list(title = 'Inoculation Status'))
 @
 \end{figure}
-
-<<glmmodel1,cache=FALSE>>=
-glm1 <- glm(cbind(infected, total) ~ variety*n.trt*status2 + row,
-            family = quasibinomial, data = fert.sim1)
-glm2 <- glm(cbind(infected, total) ~ block + variety*n.trt*status2,
-            family = quasibinomial, data = fert.sim1)
-glm3 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
-            family = quasibinomial, data = fert.sim1)
-glm4 <- glm(cbind(infected, total) ~ block/row + variety*n.trt*status2,
-            family = quasibinomial, data = fert.sim1)
-glm5 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
-            family = quasibinomial, data = fert.sim1)
-
-glmnointMF <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
-            family = quasibinomial, data = fert2)
-glmmnointMF <- glmer(cbind(infected, total) ~ variety + variety*n.trt*status2 + (1|block/row),
-            family = binomial, data = fert.sim1)
-@
 
 \subsection{Model Refinement}
 
@@ -451,9 +423,9 @@ included the code we used to create the output for this report. Note
 that we used a simulated dataset.
 
 \subsection{Data Preprocessing}
-\noindent We created variable with a unique level for each row, since row
-it was not included in the dataset. We also changed the baseline levels
-of \verb|n.application| and \verb|status|.
+We changed the baseline levels of \verb|n.application| and \verb|status|.
+If the YLST variety is the primary variety of interest, the \verb|relevel|
+function could be used on the \verb|variety| variable the same way.
 <<fakepre,eval=FALSE>>=
 @
 
