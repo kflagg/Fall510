@@ -376,6 +376,8 @@ glm3way <- glm(cbind(infected, total) ~ variety*n.trt*status+row, family="binomi
 
 explain: if no evidence of a three way interaction what can you do, how to continue selection.
 
+Adding a sentence to make sure I can push
+
 \subsection{Interpretation}
 
 Explain how to interpret with three way interaction (essentially interpret two way interaction for each inoculated and control)
