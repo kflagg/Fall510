@@ -99,7 +99,7 @@ We address the following questions in this report:
 
 \section{Study Design/Data collection}
 
-Nar conducted this experiment in a MSU field at the base of the Bridger Mountains. He chose one area in the field and divided it into six $31.5$ by $27.5$ meter blocks. The blocks were then divided into five rows, with $5$ meters of space between each row. Each row was randomly assigned to a variety of Winter Wheat with separate randomizations in each block. Three of the chosen varieties are known to be resistant to WSMV (SNMS, TAM 112, and MACE). The pronghorn variety (PRHG) is known to be susceptible to WSMV. The last variety, Yellowstone (YLST), is a common variety in Montana, and its susceptibility to WSMV is unknown. \\
+Nar conducted this experiment in a MSU field at the base of the Bridger Mountains. He chose one area in the field and divided it into six $31.5$ by $27.5$ meter blocks. The blocks were then divided into five rows, with $5$ meters of space between each row. Each row was randomly assigned to a variety of Winter Wheat with separate randomizations in each block. Three of the chosen varieties are known to be resistant to WSMV (SNMS, TAM 112, and MACE). The pronghorn variety (PRHG) is known to be susceptible to WSMV. The last variety, Yellowstone (YSTN), is a common variety in Montana, and its susceptibility to WSMV is unknown. \\
 
 \noindent After assigning rows to varieties, the rows were then divided into six $1.5$ by $5$ meter plots. Each plot was randomly assigned to one of six combinations of nitrogen application time and inoculation status, with separate randomizations in each row. The combinations were fall/inoculated, fall/control, early spring/inoculated, early spring/control, late spring/inoculated, and late spring/control. \\
 
@@ -107,69 +107,61 @@ Nar conducted this experiment in a MSU field at the base of the Bridger Mountain
 
 \noindent All plots were planted in mid September and allowed to grow over the winter. The following spring and summer, $30$ leaves were picked from different plants within each plot and taken to the lab to be tested for presence of the virus. The selection of the leaves from each plot was not random nor technically systematic. The six technicians were instructed to collect a sample of plants spread evenly throughout the plot. There is no possibility of visual bias because the symptoms are not heavy enough in this area of Montana for the plants to show clear visual evidence of the virus. \\
 
-\noindent The sampling was all done in one day on two occasions. The first sampling date occured at the end of May when the plants were in the tillering stage, and the second sampling date occured in early July when plants were in the flowering stage. In the first year of the study, $2013-2014$, all plots were sampled on both dates. In the second year of the study, only plots with susceptible varieties were sampled on the first date, and all plots were sampled on the second date The advice given in this report is only for analysis of the data collected on the second date in July. After the leaves were picked in the field, they were sent to the lab and screened for the virus via the ELISA procedure. The data are collected and organized in a spreadsheet for the first year. The second year leaves are currently stored in ziploc bags in the freezer and are waiting to be analyzed in the lab. The researchers do not expect this waiting period to affect their ability to detect the virus. \\
+\noindent The sampling was all done in one day on two occasions. The first sampling date occurred at the end of May when the plants were in the tillering stage, and the second sampling date occurred in early July when plants were in the flowering stage. In the first year of the study, $2013-2014$, all plots were sampled on both dates. In the second year of the study, only plots with susceptible varieties were sampled on the first date, and all plots were sampled on the second date The advice given in this report is only for analysis of the data collected on the second date in July. After the leaves were picked in the field, they were sent to the lab and screened for the virus via the ELISA procedure. The data are collected and organized in a spreadsheet for the first year. The second year leaves are currently stored in Ziploc bags in the freezer and are waiting to be analyzed in the lab. The researchers do not expect this waiting period to affect their ability to detect the virus. \\
 
 \noindent This is a three year study, and planting for the third year of the study is currently taking place. Each year, the assignment of varieties to rows and treatments to plots is re-randomized. Furthermore, planting takes place in the gaps between the plots from the previous year.
 
 \section{Recommendations}
 
-\subsection{Binomial Generalized Linear Mixed Model}
+\subsection{Binomial Generalized Linear Model}
 
 \noindent Because the response variable is a Binomial count, and because
 the design includes random assignment of variety to rows within blocks,
-a binomial generalized linear mixed model is appropriate. This model
-will estimate the probability of infection for each
-\verb|variety:treatment:status| combination while controlling for
-differences between blocks and between rows in the same block.
+a Binomial generalized linear model is appropriate. We recommend using
+a three-way interaction to estimate the probability of infection for each
+variety/treatment/inoculation status combination and a block/variety
+interaction to control for differences between blocks and between rows
+in the same block.
 
 \noindent The model is
 $$
 y_i\sim\mathrm{Binomial}(30, p_i),
 $$
 $$
-\mathrm{logit}(p_i)=\mathbf{x}_i\mathbf{\beta}+b_{0,j[i]}+b_{1,j[i],k[i]}
+\mathrm{logit}(p_i)=\mu+\alpha_{b[i]}+\beta_{v[i]}+\gamma_{t[i]}+\delta_{j[i]}
++(\alpha\beta)_{b[i],v[i]}+(\beta\gamma)_{v[i],t[i]}+(\beta\delta)_{v[i],j[i]}
++(\gamma\delta)_{t[i],j[i]}+(\beta\gamma\delta)_{v[i],t[i],j[i]}
 $$
 where
 \begin{itemize}
 \item \(p_i\) is the probability of infection in the \(i\)th plot,
 \item \(\mathrm{logit}(p_i)=\log\left(\dfrac{p_i}{1-p_i}\right)\) is the
-natural logarithm of the odds of infection,
-\item \(\mathbf{x_i}\) is a row vector containing indicator variables for
-the variety, nitrogen application timing, and inoculation status of
-observation \(i\),
-\item \(\mathbf{\beta}\) is a column vector of fixed-effect coefficients, and
-\item \(b_{0,j}\sim\mathrm{N}(0,\sigma^2_{b_0})\) and
-\(b_{1,j,k}\sim\mathrm{N}(0,\sigma^2_{b_1})\) are random effects for block
-and row, respectively.
+natural logarithm of the odds of infection, and
+\item \(b[i]\), \(v[i]\), \(t[i]\), and \(j[i]\) index the block,
+variety, nitrogen application timing, and inoculation status of
+observation \(i\).
 \end{itemize}
 
 \noindent The assumptions for this model are that plants within a plot
 are independent and have the same probability of being infected, and
-that plots within a row are independent of each other.
+that plots are independent given the other variables in the model.
 
-\noindent Advantages of the Binomial GLMM include:
-\begin{itemize}
-\item It estimates and controls for variability between rows and blocks.
-\item It avoids confounding variety effects with row effects and correctly
-models the rows and nested within blocks.
-\item Random effects can explain extra variation beyond what the
-fixed-effect Binomial GLM can account for.
-\end{itemize}
-
-\noindent Disadvantages of this model include:
-\begin{itemize}
-\item It must be fit by numerically maximizing the likelihood with an
-iterative algorithm. Including a large number of parameters (such as
-third-order interaction coefficients) can cause the algorithm to fail
-to converge.
-\item The domain of the logit function is \((0, 1)\). If a large proportion
-of the data are zeros, meaning an infection probability is near 0, the
-algorithm will have difficulty estimating the coefficients. In this
-situation, estimates may be unreliable or the algorithm may not converge.
-\item We are not aware of any tools that can fit a Binomial GLMM with
-overdispersion. If there are additional sources of variation that the
-model does not account for, the standard error estimates will be too small.
-\end{itemize}
+\noindent There are several reasons why we recommend using a fixed-effects
+generalized linear model instead of a generalized linear mixed model.
+We observed overdispersion in Nar's data, and there are no simple tools
+for including overdispersion in mixed models. Therefore, the standard
+errors in the mixed model output would be based on an incorrect estimate
+of the variance and might not be trustworthy. Additionally, including
+many coefficients and nested effects in a mixed model can cause
+computational problems where the software will fail to find unique
+solutions for the parameters. These problems are made worse in a Binomial
+GLMM when the counts are small, as in these data. The Binomial GLM can
+adjust for overdispersion and avoid many of the computational difficulties
+associated with the GLMM. The GLM can correctly model the nested
+design through a block by variety interaction. The only advantage of the
+GLMM is that it would estimate block- and row-level variances, but
+it is our opinion that this is outweighed by the lack of an overdispersion
+estimate and the computational difficulties.
 
 \subsection{Graphical Data Exploration}
 
@@ -183,7 +175,7 @@ inoculation status is with boxplots of infection counts for each
 combination of factor levels. The \verb|qplot| function in the
 \verb|ggplot2| package is a simple way to do this.
 
-\begin{figure}[b]
+\begin{figure}
 \caption{Example interaction plot using \texttt{qplot}.}
 <<interactionplot,echo=FALSE,message=FALSE>>=
 require(ggplot2)
@@ -193,7 +185,7 @@ qplot(x = n.trt, y = infected, geom = 'boxplot', color = status,
 @
 \end{figure}
 
-\noindent We noticed that infection counts of 0 were recored in 67 of the
+\noindent We noticed that infection counts of 0 were recorded in 67 of the
 180 plots in Nar's dataset. This is a large fraction of the data; if the
 distribution of these zeros is related to the variables in the model then
 it may be impossible to estimate coefficients for factor levels where
@@ -213,7 +205,7 @@ variety 1.
 \noindent If a treatment has many zeros across all varieties or a variety
 has many zeros, Nar should consider whether he has reason to believe
 that treatment or variety has qualitative differences from the others
-that would cause it to have a much lower infrection rate. These data would
+that would cause it to have a much lower infection rate. These data would
 be considered as coming from a different population than the data with
 fewer zeros. \textbf{If and only if it is justified}, Nar could omit all
 of the data for this treatment or variety when fitting the model. The scope
@@ -221,7 +213,7 @@ of inference for this model must then be limited to varieties and
 treatments that have a nonzero infection rate. A separate analysis would
 be needed for more resistant population.
 
-\begin{figure}[b]
+\begin{figure}
 \caption{Example heatmap visualization for identifying patterns of zeros.}
 <<heatmap,echo=FALSE,message=FALSE>>=
 ## Heatmap with meaningful ordering
@@ -293,45 +285,44 @@ tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
 The following code will fit the three-way interaction model:
 
 <<startingmodel,warning=FALSE,results='hide',cache=TRUE>>=
-glm3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+glm3way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
                family = quasibinomial, data = fert.sim1)
 @
 
 If it is decided that certain observations come from an extremely
-resistant population and can be omited from the current analysis.
+resistant population and can be omitted from the current analysis:
 
 <<novar1,warning=FALSE,results='hide',cache=TRUE>>=
-noVar1 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+noVar1 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
               family = quasibinomial, data = fert.sim1, subset = variety!='Var1')
 @
 
 If there is no interest in comparing between inoculated plots and
-control plots, separate models could be fit.
+control plots, separate models could be fit:
 
 <<separatemodels,warning=FALSE,results='hide',cache=TRUE>>=
-onlyINOC <- glm(cbind(infected, total) ~ block/variety + variety*n.trt,
+onlyINOC <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
                 family = quasibinomial, data = fert.sim1, subset = status=='INOC')
 
-onlyCNTL <- glm(cbind(infected, total) ~ block/variety + variety*n.trt,
+onlyCNTL <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
                 family = quasibinomial, data = fert.sim1, subset = status=='CNTL')
 @
 
-<<models5,echo=FALSE,warning=FALSE,results='hide',cache=TRUE>>=
-glm3way2 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
-                family = binomial, data = fert2)
+<<models5,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=TRUE>>=
+glm3way2 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+                family = quasibinomial, data = fert2)
 summary(glm3way2)
 
-glm2way2 <- glm(cbind(infected, total) ~ block/variety + variety*n.trt + variety*status2 + n.trt*status2,
+glm2way2 <- glm(cbind(infected, total) ~ block*variety + (variety+n.trt+status2)^2,
                 family = quasibinomial, data = fert2)
 summary(glm2way2)
 
 Anova(glm3way2, test.statistic = 'F')
 Anova(glm2way2, test.statistic = 'F')
-Anova(glm2way2, glm3way2, test.statistic = 'F')
 anova(glm2way2, glm3way2)
 @
 
-<<nosnms,echo=FALSE,warning=FALSE,results='hide',cache=FALSE>>=
+<<nosnms,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=FALSE>>=
 table(fert2$infected==0,fert2$variety)
 
 noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
@@ -351,8 +342,10 @@ Anova(noSNMS2way)
 anova(noSNMS2way, noSNMS3way)
 @
 
-<<plots3,eval=FALSE,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
-par(mfrow = c(1, 2))
+<<plots3,eval=FALSE,echo=FALSE,warning=FALSE,message=FALSE>>=
+par(mfrow = c(2, 2))
+plot(resid(glm3way2) ~ predict(glm3way2), col = variety, data = fert2)
+plot(resid(glm3way2) ~ fitted(glm3way2), col = variety, data = fert2)
 plot(resid(noSNMS3way) ~ predict(noSNMS3way), col = variety,
      data = fert2, subset = variety!='SNMS')
 plot(resid(noSNMS3way) ~ fitted(noSNMS3way), col = variety,
@@ -399,6 +392,8 @@ glm3way <- glm(cbind(infected, total) ~ variety*n.trt*status+row, family="binomi
 @
 
 explain: if no evidence of a three way interaction what can you do, how to continue selection.
+
+Adding a sentence to make sure I can push
 
 \subsection{Interpretation}
 

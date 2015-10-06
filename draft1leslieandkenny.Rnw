@@ -146,6 +146,23 @@ observation \(i\).
 are independent and have the same probability of being infected, and
 that plots are independent given the other variables in the model.
 
+\noindent There are several reasons why we recommend using a fixed-effects
+generalized linear model instead of a generalized linear mixed model.
+We observed overdispersion in Nar's data, and there are no simple tools
+for including overdispersion in mixed models. Therefore, the standard
+errors in the mixed model output would be based on an incorrect estimate
+of the variance and might not be trustworthy. Additionally, including
+many coefficients and nested effects in a mixed model can cause
+computational problems where the software will fail to find unique
+solutions for the parameters. These problems are made worse in a Binomial
+GLMM when the counts are small, as in these data. The Binomial GLM can
+adjust for overdispersion and avoid many of the computational difficulties
+associated with the GLMM. The GLM can correctly model the nested
+design through a block by variety interaction. The only advantage of the
+GLMM is that it would estimate block- and row-level variances, but
+it is our opinion that this is outweighed by the lack of an overdispersion
+estimate and the computational difficulties.
+
 \subsection{Graphical Data Exploration}
 
 \noindent Before fitting a model, we recommend starting by creating plots
@@ -273,7 +290,7 @@ glm3way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
 @
 
 If it is decided that certain observations come from an extremely
-resistant population and can be omitted from the current analysis.
+resistant population and can be omitted from the current analysis:
 
 <<novar1,warning=FALSE,results='hide',cache=TRUE>>=
 noVar1 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
@@ -281,7 +298,7 @@ noVar1 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
 @
 
 If there is no interest in comparing between inoculated plots and
-control plots, separate models could be fit.
+control plots, separate models could be fit:
 
 <<separatemodels,warning=FALSE,results='hide',cache=TRUE>>=
 onlyINOC <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
@@ -293,7 +310,7 @@ onlyCNTL <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
 
 <<models5,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=TRUE>>=
 glm3way2 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
-                family = binomial, data = fert2)
+                family = quasibinomial, data = fert2)
 summary(glm3way2)
 
 glm2way2 <- glm(cbind(infected, total) ~ block*variety + (variety+n.trt+status2)^2,
