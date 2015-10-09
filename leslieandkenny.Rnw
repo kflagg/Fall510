@@ -37,7 +37,7 @@ require(lattice)
 
 <<data,echo=FALSE>>=
 # Read and set up the data
-#for leslie 
+#for leslie
 #setwd("~/Documents/ConsultingFall2015/Fall510")
 fert2 <- read.csv("fert2.csv")
 
@@ -371,7 +371,7 @@ In this section, we describe how to go through the process of model selection. A
 Anova(glm3way, test="F")
 @
 
-\noindent Here is how we would interpret the results in each row of the table. Note, it is not appropriate to consider removal of any of the terms involving block. Block to block variability is expected because it was included as a design variable, and so it should be included in the model. The $block*variety$ interaction also needs to be included to account for the nesting structure in the design. 
+\noindent Here is how we would interpret the results in each row of the table. Note, it is not appropriate to consider removal of any of the terms involving block. Block to block variability is expected because it was included as a design variable, and so it should be included in the model. The $block*variety$ interaction also needs to be included to account for the nesting structure in the design.
 \begin{enumerate}
 \item \verb+variety:n.trt:status2+ ``There is no evidence that the interaction between variety and nitrogen application time depends on inoculation status (p-value$=0.388$ from F-stat$=1.07$ on $8$ and $125$ df).''
 \item \verb+n.trt:status2+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on inoculation status after controlling for all other two way interactions in the model (p-value$=0.368$ from F-stat$=1.01$ on $2$ and $133$ df).
@@ -379,11 +379,11 @@ Anova(glm3way, test="F")
 \item \verb+variety:n.trt+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all other two way interactions in the model (p-value$=0.453$ from F-stat$=0.98$ on $8$ and $133$ df).
 \end{enumerate}
 
-\noindent If no evidence is found for any of the interactions, the simplest model we recommend fitting should contain the $block*variety$ interaction and all main effects (shown below). If this model is selected, each effect is then interpreted after controlling for the effects of the other variables in the model. For example, to assess evidence for the \verb+n.trt+ effect in this model, we would say, ``There is no evidence that the odds of virus infection depends on nitrogen application time after controlling for block, variety, inoculation status, and the 
+\noindent If no evidence is found for any of the interactions, the simplest model we recommend fitting should contain the $block*variety$ interaction and all main effects (shown below). If this model is selected, each effect is then interpreted after controlling for the effects of the other variables in the model. For example, to assess evidence for the \verb+n.trt+ effect in this model, we would say, ``There is no evidence that the odds of virus infection depends on nitrogen application time after controlling for block, variety, inoculation status, and the
 $block*variety$ interaction.''
 
 <<glmnointeractions, echo=TRUE>>=
-glmnointeractions <- glm(cbind(infected, total) ~ block/variety + variety+n.trt 
+glmnointeractions <- glm(cbind(infected, total) ~ block/variety + variety+n.trt
                          + status2,
                family = quasibinomial, data = fert.sim1)
 Anova(glmnointeractions, test="F")
@@ -395,7 +395,7 @@ Anova(glmnointeractions, test="F")
 glm.no3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt + n.trt*status2 + variety*status2,
                family = quasibinomial, data = fert.sim1)
 #drop in dev F-test
-#((196-185)/8)/(185/125) 
+#((196-185)/8)/(185/125)
 #0.929
 #1-pf(0.929, 11, 125)
 #0.512
@@ -405,7 +405,7 @@ glm.no3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt + n.trt
 
 \subsection{Interpretation}
 
-\noindent In this section, we describe how to interpret effects if evidence of a three-way interaction is found. The effects plots in the \verb+effects+ packages provide nice visuals for displaying estimated probabilities of infection across levels of mulitiple variables. 
+\noindent In this section, we describe how to interpret effects if evidence of a three-way interaction is found. The effects plots in the \verb+effects+ packages provide nice visuals for displaying estimated probabilities of infection across levels of mulitiple variables.
 
 \begin{figure}[!h]
 <<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5, fig.align='center'>>=
@@ -420,7 +420,7 @@ plot(Effect(c('variety','n.trt','status2'), glm3way),
 \caption{The fitted model can be nicely summarized with plots from the \texttt{effects} package.}
 \end{figure}
 
-\noindent The \verb+Effect+ function is convenient because it provides the estimated probabilities at each treatment combination, averaged over all blocks. The results are  provided in a organized table (see below). 
+\noindent The \verb+Effect+ function is convenient because it provides the estimated probabilities at each treatment combination, averaged over all blocks. The results are  provided in a organized table (see below).
 
 <<summary, echo=TRUE>>=
 Effect(c('variety','n.trt','status2'), glm3way, se=TRUE)
@@ -431,7 +431,7 @@ Effect(c('variety','n.trt','status2'), glm3way, se=TRUE)
 \noindent You can start by looking at the summary of the model, \verb+summary(glm3way)+. The coefficients of interest will be those found in the rows \verb+n.trtEARLY SPRING+ and \verb+n.trtLATE SPRING+. Below we show how to interpret these coefficients in words, and how the meaning changes when the reference level is manipulated.
 
 <<first, echo=TRUE, message=FALSE>>=
-#use the default reference level to describe the effects across 
+#use the default reference level to describe the effects across
 #nitrogen application for inoculated plants of variety 1 (averaged over blocks)
 exp(coef(glm3way)[11])
 exp(confint(glm3way, 11))
@@ -445,7 +445,7 @@ For inoculated plants of variety $1$, the odds of virus infection when nitrogen 
 \end{quote}
 
 <<second, echo=TRUE, message=FALSE, eval=FALSE>>=
-#suppose we want to the effects of introgen application for 
+#suppose we want to the effects of introgen application for
 #inoculated plants of variety 3
 #first relevel
 var3 <- relevel(fert.sim1$variety, "Var3")
@@ -458,7 +458,7 @@ exp(confint(glm.refvar3, 11))
 exp(coef(glm.refvar3)[12])
 exp(confint(glm.refvar3, 12))
 
-#now suppose we want to the effects of introgen application for 
+#now suppose we want to the effects of introgen application for
 #non-inoculated plants of variety 3
 #first relevel the status variable
 statuscntl <- relevel(fert.sim1$status2, "CNTL")
