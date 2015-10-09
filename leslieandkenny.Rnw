@@ -2,6 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{float}
 
 \setlength{\textwidth}{6.5in}
 \setlength{\textheight}{9in}
@@ -22,7 +23,7 @@ opts_chunk$set(fig.width = 10, fig.height = 4, out.width = '\\linewidth',
                concordance = TRUE,
                tidy.opts = list(width.cutoff = 60, keep.blank.line=FALSE),
                size = 'footnotesize')
-options(replace.assign = TRUE, width = 112, digits = 3, max.print = '72',
+options(replace.assign = TRUE, width = 112, digits = 3, max.print = '202',
         show.signif.stars = FALSE)
 
 require(xtable)
@@ -36,7 +37,9 @@ require(lattice)
 
 <<data,echo=FALSE>>=
 # Read and set up the data
-fert2 <- read.csv('fert2.csv')
+#for leslie
+#setwd("~/Documents/ConsultingFall2015/Fall510")
+fert2 <- read.csv("fert2.csv")
 
 # Correctly order nitrogen application levels
 fert2$n.trt <- relevel(fert2$n.application, 'FALL')
@@ -73,6 +76,9 @@ fert.sim1$n.trt <- relevel(fert.sim1$n.application, 'FALL')
 
 # If status=INOC is the most interesting case, make INOC the baseline
 fert.sim1$status2 <- relevel(fert.sim1$status, 'INOC')
+
+# This forces the constraint that the block effects sum to 0
+contrasts(fert.sim1$block) <- contr.sum(6, contrast=TRUE)
 @
 
 \maketitle
@@ -84,7 +90,7 @@ fert.sim1$status2 <- relevel(fert.sim1$status, 'INOC')
 \noindent
 
 \section{Statistical Experience and Assistance Needed}
-\noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently sitting in Mixed Models. Nar has asked for our help in building a model, fitting it in R, and interpreting the results.
+\noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently sitting in on Mixed Models. Nar has asked for our help in building a model, fitting it in R, and interpreting the results.
 
 \section{Objectives and Questions}
 \noindent Nar is interested in the effect of variety, nitrogen application time, and inoculation on the probability of virus infection in Winter Wheat. He is primarily interested in the effect of nitrogen application time, and he wants to assess evidence for all possible two and three way interactions. Nar's goal is to select the simplest possible model, and then use this model to describe the effects of the above variables. \\
@@ -99,15 +105,15 @@ We address the following questions in this report:
 
 \section{Study Design/Data collection}
 
-Nar conducted this experiment in a MSU field at the base of the Bridger Mountains. He chose one area in the field and divided it into six $31.5$ by $27.5$ meter blocks. The blocks were then divided into five rows, with $5$ meters of space between each row. Each row was randomly assigned to a variety of Winter Wheat with separate randomizations in each block. Three of the chosen varieties are known to be resistant to WSMV (SNMS, TAM 112, and MACE). The pronghorn variety (PRHG) is known to be susceptible to WSMV. The last variety, Yellowstone (YSTN), is a common variety in Montana, and its susceptibility to WSMV is unknown. \\
+Nar conducted this experiment in a MSU field at the base of the Bridger Mountains. He divided the field into six $31.5$ by $27.5$ meter blocks. The blocks were then divided into five rows, with $5$ meters of space between each row. Each row was randomly assigned to a variety of Winter Wheat with separate randomizations in each block. Three of the chosen varieties are known to be resistant to WSMV (SNMS, TAM 112, and MACE). The pronghorn variety (PRHG) is known to be susceptible to WSMV. The last variety, Yellowstone (YSTN), is a common variety in Montana, and its susceptibility to WSMV is unknown. \\
 
 \noindent After assigning rows to varieties, the rows were then divided into six $1.5$ by $5$ meter plots. Each plot was randomly assigned to one of six combinations of nitrogen application time and inoculation status, with separate randomizations in each row. The combinations were fall/inoculated, fall/control, early spring/inoculated, early spring/control, late spring/inoculated, and late spring/control. \\
 
-\noindent Plots that were assigned to the inoculated treatment had five infected plants transplanted to the middle of the plot. These plants were infected in the greenhouse by clipping an infected leaf to the healthy plant. The plants are infected in the tillering stage of their life cycle at an age of about one month. The Wheat Streak Mosaic Virus is transmitted by the wheat curl mite, tiny organisms that are nearly invisible to the naked eye. They can easily move from leaf to leaf on a plant, and they are transported from plant to plant by the wind  (Sloderbeck $2008$). It is conceivable that the mites on the infected plants introduced to the inoculated plots could move to healthy plants within that plot. But, the researchers say that it is nearly impossible for the mites to move from an inoculated plot to a non-inoculated plot with such a low population of mites. Plants with the virus in non-inoculated plots are assumed to have been infected by mites in the surrounding environment. \\
+\noindent Plots assigned to the inoculated treatment had five infected plants transplanted to the middle of the plot. These plants were infected in the greenhouse by clipping an infected leaf to the healthy plant. The plants were infected in the tillering stage of their life cycle at an age of about one month. The Wheat Streak Mosaic Virus is transmitted by the wheat curl mite, tiny organisms that are nearly invisible to the naked eye. They can easily move from leaf to leaf on a plant, and they are transported from plant to plant by the wind  (Sloderbeck $2008$). It is conceivable that the mites on the infected plants introduced to the inoculated plots could move to healthy plants within that plot. But, Nar says that it is nearly impossible for the mites to move from an inoculated plot to a non-inoculated plot with such a low population of mites. Plants with the virus in non-inoculated plots are assumed to have been infected by mites in the surrounding environment. \\
 
-\noindent All plots were planted in mid September and allowed to grow over the winter. The following spring and summer, $30$ leaves were picked from different plants within each plot and taken to the lab to be tested for presence of the virus. The selection of the leaves from each plot was not random nor technically systematic. The six technicians were instructed to collect a sample of plants spread evenly throughout the plot. There is no possibility of visual bias because the symptoms are not heavy enough in this area of Montana for the plants to show clear visual evidence of the virus. \\
+\noindent All plots were planted in mid-September and allowed to grow over the winter. The following spring and summer, $30$ leaves were picked from different plants within each plot and taken to the lab to be tested for presence of the virus. The selection of the leaves from each plot was not random nor technically systematic. The six technicians were instructed to collect a sample of plants spread evenly throughout the plot. There is no possibility of visual bias because the symptoms are not heavy enough in this area of Montana for the plants to show clear visual evidence of the virus. \\
 
-\noindent The sampling was all done in one day on two occasions. The first sampling date occurred at the end of May when the plants were in the tillering stage, and the second sampling date occurred in early July when plants were in the flowering stage. In the first year of the study, $2013-2014$, all plots were sampled on both dates. In the second year of the study, only plots with susceptible varieties were sampled on the first date, and all plots were sampled on the second date The advice given in this report is only for analysis of the data collected on the second date in July. After the leaves were picked in the field, they were sent to the lab and screened for the virus via the ELISA procedure. The data are collected and organized in a spreadsheet for the first year. The second year leaves are currently stored in Ziploc bags in the freezer and are waiting to be analyzed in the lab. The researchers do not expect this waiting period to affect their ability to detect the virus. \\
+\noindent The sampling was all done in one day on two occasions. The first sampling date occurred at the end of May when the plants were in the tillering stage, and the second sampling date occurred in early July when plants were in the flowering stage. In the first year of the study, $2013-2014$, all plots were sampled on both dates. In the second year of the study, only plots with susceptible varieties were sampled on the first date, and all plots were sampled on the second date. The advice given in this report is only for analysis of the data collected on the second date in July. After the leaves were picked in the field, they were sent to the lab and screened for the virus via the ELISA procedure. The data are collected and organized in a spreadsheet for the first year. The second year leaves are currently stored in Ziploc bags in the freezer and are waiting to be analyzed in the lab. The researchers do not expect this waiting period to affect their ability to detect the virus. \\
 
 \noindent This is a three year study, and planting for the third year of the study is currently taking place. Each year, the assignment of varieties to rows and treatments to plots is re-randomized. Furthermore, planting takes place in the gaps between the plots from the previous year.
 
@@ -121,7 +127,7 @@ a Binomial generalized linear model is appropriate. We recommend using
 a three-way interaction to estimate the probability of infection for each
 variety/treatment/inoculation status combination and a block/variety
 interaction to control for differences between blocks and between rows
-in the same block.
+in the same block.\\
 
 \noindent The model is
 $$
@@ -144,42 +150,54 @@ observation \(i\).
 
 \noindent The assumptions for this model are that plants within a plot
 are independent and have the same probability of being infected, and
-that plots are independent given the other variables in the model.
+that plots are independent given the other variables in the model. \\
 
 \noindent There are several reasons why we recommend using a fixed-effects
-generalized linear model instead of a generalized linear mixed model.
-We observed overdispersion in Nar's data, and there are no simple tools
+generalized linear model instead of a generalized linear mixed model;
+these reasons are related to overdispersion and computational issues. \\
+
+\noindent Since the inoculated plants were planted in the center of the
+plots, we expect to see spatial dependence where plants near the centers
+are more likely to become infected than plants further from the centers.
+Then individual plants could have infection probabilities that differ from
+the infection rate estimated for the plot they are in. This would result
+in the data could having more variation than what the Binomial model
+accounts for, a situation known as overdispersion. We observed
+overdispersion in Nar's data, and there are no simple tools
 for including overdispersion in mixed models. Therefore, the standard
 errors in the mixed model output would be based on an incorrect estimate
-of the variance and might not be trustworthy. Additionally, including
-many coefficients and nested effects in a mixed model can cause
-computational problems where the software will fail to find unique
-solutions for the parameters. These problems are made worse in a Binomial
-GLMM when the counts are small, as in these data. The Binomial GLM can
-adjust for overdispersion and avoid many of the computational difficulties
-associated with the GLMM. The GLM can correctly model the nested
-design through a block by variety interaction. The only advantage of the
-GLMM is that it would estimate block- and row-level variances, but
-it is our opinion that this is outweighed by the lack of an overdispersion
-estimate and the computational difficulties.
+of the variance and might not be trustworthy. This problem is easily
+remedied by using a Quasibinomial fixed-effects GLM model. \\
+
+\noindent Additionally, including many coefficients and nested effects
+in a mixed model can cause computational problems where the software will
+fail to find unique solutions for the parameters. These problems are made
+worse in a Binomial GLMM when the counts are small, as in these data. The
+Binomial GLM can avoid many of the computational difficulties associated
+with the GLMM. The GLM can correctly model the nested design through a
+block by variety interaction. \\
+
+\noindent The only advantage of the GLMM is that it would estimate block-
+and row-level variances, but it is our opinion that this is outweighed by
+the lack of an overdispersion estimate and the computational difficulties.
 
 \subsection{Graphical Data Exploration}
 
 \noindent Before fitting a model, we recommend starting by creating plots
 for exploratory data analysis. This is useful for seeing which interactions
 may be present, and for identifying patterns that may represent violations
-of assumptions or potential computational problems.
+of assumptions or potential computational problems. \\
 
 \noindent A good way to visually compare varieties, treatments, and
 inoculation status is with boxplots of infection counts for each
 combination of factor levels. The \verb|qplot| function in the
-\verb|ggplot2| package is a simple way to do this.
+\verb|ggplot2| package is a simple way to do this. \\
 
-\begin{figure}
+\begin{figure}[h!]
 \caption{Example interaction plot using \texttt{qplot}.}
-<<interactionplot,echo=FALSE,message=FALSE>>=
+<<interactionplot,echo=FALSE,message=FALSE,out.height='0.3\\linewidth',fig.height=3>>=
 require(ggplot2)
-qplot(x = n.trt, y = infected, geom = 'boxplot', color = status,
+qplot(x = n.trt, y = infected, geom = c('boxplot', 'point'), color = status,
       facets = .~variety, data = fert.sim1) +
   theme(axis.text.x = element_text(angle = 90))
 @
@@ -189,18 +207,18 @@ qplot(x = n.trt, y = infected, geom = 'boxplot', color = status,
 180 plots in Nar's dataset. This is a large fraction of the data; if the
 distribution of these zeros is related to the variables in the model then
 it may be impossible to estimate coefficients for factor levels where
-infection rates are nearly zero.
+infection rates are nearly zero. \\
 
 \noindent We recommend sorting the data and creating a heatmap to look
 for patterns of zeros. Figure 2 shows an example using simulated data.
 The most serious problems will come from the zeros, so we chose a contrasting
-color (black) for plots with infection counts of 0.
+color (black) for plots with infection counts of 0.\\
 
 \noindent Any treatment or variety with many black squares is a reason
 for concern. In the example, all but one of the inoculated fall-application
 plots for Var1 had counts of 0. The software will have difficulty estimating
 the the three-way interaction involving fall nitrogen application and
-variety 1.
+variety 1. \\
 
 \noindent If a treatment has many zeros across all varieties or a variety
 has many zeros, Nar should consider whether he has reason to believe
@@ -211,11 +229,11 @@ fewer zeros. \textbf{If and only if it is justified}, Nar could omit all
 of the data for this treatment or variety when fitting the model. The scope
 of inference for this model must then be limited to varieties and
 treatments that have a nonzero infection rate. A separate analysis would
-be needed for more resistant population.
+be needed for the more resistant population. \\
 
-\begin{figure}
+\begin{figure}[h!]
 \caption{Example heatmap visualization for identifying patterns of zeros.}
-<<heatmap,echo=FALSE,message=FALSE>>=
+<<heatmap,echo=FALSE,message=FALSE,out.height='0.3\\linewidth',fig.height=3>>=
 ## Heatmap with meaningful ordering
 
 # Order the dataset, using the arrange function from the dplyr package
@@ -229,7 +247,7 @@ infected.arranged <- matrix(fert.ordered$infected, ncol = 6, byrow = TRUE)
 layout(t(1:2), widths = c(9, 1))
 
 # Plot the heatmap, with zeros in black and segments separating the blocks
-par(mar = c(5, 10, 6, 2)) # Set big margins
+par(mar = c(3, 10, 6, 2)) # Set big margins
 image(z = infected.arranged, y = 1:6,
 
       # Variety blocks are 1 unit wide, centered at 0.5, 1.5, etc
@@ -254,7 +272,7 @@ axis(2, labels = levels(with(fert.ordered, interaction(n.trt, status))), at = 1:
 axis(1, labels = levels(fert.ordered$variety), at = 1:5)
 
 # Legend
-par(mar = c(5, 1, 6, 2))
+par(mar = c(3, 1, 6, 2))
 image(y = seq(-0.5, 30.5, 1), z = matrix(0:30, nrow = 1), axes = FALSE, ylab = '',
       col = c('#000000', heat.colors(30)), zlim = c(0, 30))
 title('Legend', line = 1.5)
@@ -265,14 +283,14 @@ axis(4)
 \noindent If information about the physical layout of the field is
 available, it would be possible to construct a similar heatmap to look
 for spatial patterns. If correlation between nearby plots is seen,
-the model should be modified to account for this.
+the model should be modified to account for this. \\
 
 \noindent Another option for examining the data graphically is the
 \verb|itableplot| function in the \verb|tabplot| package. This is a
 useful interactive tool for visualizing large datasets and identifying
 patterns.
 
-\begin{figure}
+\begin{figure}[h!]
 \caption{Example \texttt{itableplot} output.}
 <<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
 tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
@@ -280,16 +298,17 @@ tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
 @
 \end{figure}
 
-\subsection{Model Fitting and Possible Issues}
+\subsection{Model Fitting}
+\label{model}
 
-The following code will fit the three-way interaction model:
+\noindent The following code will fit the three-way interaction model:
 
 <<startingmodel,warning=FALSE,results='hide',cache=TRUE>>=
-glm3way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+glm3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
                family = quasibinomial, data = fert.sim1)
 @
 
-If it is decided that certain observations come from an extremely
+\noindent If it is decided that certain observations come from an extremely
 resistant population and can be omitted from the current analysis:
 
 <<novar1,warning=FALSE,results='hide',cache=TRUE>>=
@@ -297,7 +316,7 @@ noVar1 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
               family = quasibinomial, data = fert.sim1, subset = variety!='Var1')
 @
 
-If there is no interest in comparing between inoculated plots and
+\noindent If there is no interest in comparing between inoculated plots and
 control plots, separate models could be fit:
 
 <<separatemodels,warning=FALSE,results='hide',cache=TRUE>>=
@@ -354,9 +373,57 @@ legend('topright', pch = 1, col = 1:5,
        legend = levels(fert2$variety))
 @
 
-\begin{figure}
-\caption{The fitted model can be nicely summarized with plots from the \texttt{effects} package.}
-<<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5>>=
+
+\subsection{Model Refinement}
+
+In this section, we describe how to go through the process of model selection. As discussed in the previous section, we recommend starting with the most complicated three-way interaction model and then assessing which terms can be removed. In general, start by considering removal of the highest order terms. \\
+
+\noindent We'll start by assessing evidence for the three-way interaction term. One way to consider it's removal would be to fit a model without the three-way interaction, and then conduct a drop-in-deviance F-test comparing the full and reduced models, as you learned to do in Stat $512$. This method can be time consuming, so instead we recommend using the \verb+Anova+ function in the \verb+car+ package with the option \verb+test="F"+. This provides a {\bf Type II} sums of squares table, and the tests provided are similar to extra sums of squares F-tests based on the Pearson residuals.
+%(provide reference here to info about pearson resids vs deviance resids)
+The tests in this table are conditional upon terms of the same and lower order being in the model. For example, the \verb+n.trt:status2+ row in the table tests for removal of the $n.trt*status2$ two-way interaction, conditional upon all other two way interactions and main effects being in the model. As a result, this table can be used to assess evidence for removal of each term.
+
+<<refine, echo=TRUE>>=
+Anova(glm3way, test="F")
+@
+
+\noindent Here is how we would interpret the results in each row of the table. Note, it is not appropriate to consider removal of any of the terms involving block. Block to block variability is expected because it was included as a design variable, and so it should be included in the model. The $block*variety$ interaction also needs to be included to account for the nesting structure in the design.
+\begin{enumerate}
+\item \verb+variety:n.trt:status2+ ``There is no evidence that the interaction between variety and nitrogen application time differs between inoculated and control plots (p-value$=0.388$ from F-stat$=1.07$ on $8$ and $125$ df).''
+\item \verb+n.trt:status2+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions in the model (p-value$=0.368$ from F-stat$=1.01$ on $2$ and $133$ df).
+\item \verb+variety:status2+ ``There is no evidence that the relationship between variety and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions in the model (p-value$=0.288$ from F-stat$=1.26$ on $4$ and $133$ df).
+\item \verb+variety:n.trt+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all other two way interactions in the model (p-value$=0.453$ from F-stat$=0.98$ on $8$ and $133$ df).
+\end{enumerate}
+
+\noindent If no evidence is found for any of the interactions, the simplest model we recommend fitting should contain the $block*variety$ interaction and all main effects (shown below). If this model is selected, each effect is then interpreted after controlling for the effects of the other variables in the model. For example, to assess evidence for the \verb+n.trt+ effect in this model, we would say, ``There is no evidence that the odds of virus infection depends on nitrogen application time after controlling for block, variety, inoculation status, and the
+$block*variety$ interaction.''
+
+<<glmnointeractions, echo=TRUE>>=
+glmnointeractions <- glm(cbind(infected, total) ~ block/variety + variety+n.trt
+                         + status2,
+               family = quasibinomial, data = fert.sim1)
+Anova(glmnointeractions, test="F")
+@
+
+\noindent The next section describes how to interpret effects once a model is selected.
+
+<<dropindevftest, echo=FALSE>>=
+glm.no3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt + n.trt*status2 + variety*status2,
+               family = quasibinomial, data = fert.sim1)
+#drop in dev F-test
+#((196-185)/8)/(185/125)
+#0.929
+#1-pf(0.929, 11, 125)
+#0.512
+@
+
+
+
+\subsection{Interpretation}
+
+\noindent In this section, we describe how to interpret effects if evidence of a three-way interaction is found. The effects plots in the \verb+effects+ packages provide nice visuals for displaying estimated probabilities of infection across levels of multiple variables.
+
+\begin{figure}[!h]
+<<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5, fig.align='center'>>=
 require(effects)
 plot(Effect(c('variety','n.trt','status2'), glm3way),
      multiline = TRUE, type = 'response', se = TRUE, ci.style='bars',
@@ -365,39 +432,72 @@ plot(Effect(c('variety','n.trt','status2'), glm3way),
      xlab = 'Nitrogen Application Date', ylab = 'Infection Probability',
      key.args = list(title = 'Inoculation Status'))
 @
+\caption{The fitted model can be nicely summarized with plots from the \texttt{effects} package.}
 \end{figure}
 
-\subsection{Model Refinement}
+\noindent The \verb+Effect+ function is convenient because it provides the estimated probabilities at each treatment combination, averaged over all blocks. The results are  provided in a organized table (see below).
 
-Recommend to use Chi Squared tests or F-tests? I think F-tests but not exactly sure what the F-test is giving or where its coming from.
-
-Correct df? different from lme and glmer...
-
-<<nosnms3way, echo=FALSE>>=
-Anova(noSNMS3way)
-anova(noSNMS3way)
-#1-pf(2.29, 6, 118)
-
-AIC(noSNMS3way, noSNMS2way)
-anova(noSNMS3way, noSNMS2way)
-
-#lme model to get correct df for f tests
-#why is den df now 100?
-require(nlme, quietly=T)
-noSNMS3waylme <- lme(infected ~ variety*n.trt*status,
-                    random=~1|block/row, method="ML",
-                     data = subset(fert2, variety != "SNMS"))
-
-glm3way <- glm(cbind(infected, total) ~ variety*n.trt*status+row, family="binomial", data=subset(fert2, variety != "SNMS"))
+<<summary, echo=TRUE>>=
+Effect(c('variety','n.trt','status2'), glm3way, se=TRUE)
 @
 
-explain: if no evidence of a three way interaction what can you do, how to continue selection.
+\noindent We recommend displaying the effects plot and output and then describing the effects of interest in words. When describing the effects in words, we recommend describing the effects in terms of multiplicative changes in the odds of virus infection. It is more straightforward to calculate confidence intervals when effects are described are this scale rather than the probability scale. We recommend changing the reference level of the model to find the estimates and confidence intervals for the effects of interest. Notice that when we fit the model in Section \ref{model}, we specified the constraint that the sum of the block effects would add to $0$. As a result, the estimated effects given in the model summary are the effects averaged over all blocks. \\
 
-Adding a sentence to make sure I can push
+\noindent You can start by looking at the summary of the model, \verb+summary(glm3way)+. The coefficients of interest will be those found in the rows \verb+n.trtEARLY SPRING+ and \verb+n.trtLATE SPRING+. Below we show how to interpret these coefficients in words, and how the meaning changes when the reference level is manipulated.
 
-\subsection{Interpretation}
+<<first, echo=TRUE, message=FALSE>>=
+#use the default reference level to describe the effects across
+#nitrogen application for inoculated plants of variety 1 (averaged over blocks)
+exp(coef(glm3way)[11])
+exp(confint(glm3way, 11))
+exp(coef(glm3way)[12])
+exp(confint(glm3way, 12))
+@
 
-Explain how to interpret with three way interaction (essentially interpret two way interaction for each inoculated and control)
+\noindent For these data, we would describe the nitrogen application effect for inoculated plants of variety $1$ as follows:
+\begin{quote}
+For inoculated plants of variety $1$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be $3.01$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.295$ to $104.9$ times. For inoculated plants of variety $1$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $5.05$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.652$ to $166.4$ times.
+\end{quote}
+
+<<second, echo=TRUE, message=FALSE, eval=FALSE>>=
+#suppose we want to the effects of introgen application for
+#inoculated plants of variety 3
+#first relevel
+var3 <- relevel(fert.sim1$variety, "Var3")
+#then fit model with var3
+glm.refvar3 <- glm(cbind(infected, total) ~ block/var3 + var3*n.trt*status2,
+               family = quasibinomial, data = fert.sim1)
+#interpret results
+exp(coef(glm.refvar3)[11])
+exp(confint(glm.refvar3, 11))
+exp(coef(glm.refvar3)[12])
+exp(confint(glm.refvar3, 12))
+
+#now suppose we want to the effects of introgen application for
+#non-inoculated plants of variety 3
+#first relevel the status variable
+statuscntl <- relevel(fert.sim1$status2, "CNTL")
+#then fit model with var3
+glm.refvar3cntl <- glm(cbind(infected, total) ~ block/var3 + var3*n.trt*statuscntl,
+               family = quasibinomial, data = fert.sim1)
+#interpret results
+exp(coef(glm.refvar3cntl)[11])
+exp(confint(glm.refvar3cntl, 11))
+exp(coef(glm.refvar3cntl)[12])
+exp(confint(glm.refvar3cntl, 12))
+@
+
+
+\noindent We would describe the nitrogen application effect for inoculated plants of variety $3$ as follows:
+\begin{quote}
+For inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be about equal to the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.191$ to $5.28$ times. For inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $1.24$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.269$ to $6.201$ times.
+\end{quote}
+
+\noindent We would describe the nitrogen application effect for non-inoculated plants of variety $3$ as follows:
+\begin{quote}
+For non-inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be $2.3$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.797$ to $7.72$ times. For non-inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $1.45$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.446$ to $5.16$ times.
+\end{quote}
+
 
 \section{Scope of inference}
 
@@ -408,9 +508,11 @@ The field where the study took place was not randomly selected from a larger pop
 \section{Additional Comments}
 \noindent While very low infection rates are, in practice, a desirable
 result, they present technical and computational problems for analysis.
-In similar future studies, random sampling should be used within each
-plot and the sample size should be large enough that the researchers
-expect at least one infected leaf to be found in each plot.
+In similar future studies, the sample size should be large enough that
+the researchers expect at least one infected leaf to be found in each plot.
+Additionally we recommend placing the inoculated plants at random locations
+within the plots, and collecting leaves from a simple random sample of
+locations in each plot.
 
 \section{Appendix: R Code}
 \noindent Since Nar expressed a desire for assistance with R, we have
@@ -455,6 +557,6 @@ University Press.\\
 \noindent Ramsey, F.L., Schafer, D.W. (2013). {\it The Statistical Sleuth: A Course in Methods of Data Analysis, Third Edition}. Boston, MA: Brooks/Cole, Cengage Learning.\\
 
 \noindent Sloderbeck, J., Michaud, P., Whitworth, Robert. "Wheat Pests." CurlMite. Kansas State University, 1 May 2008. Web. 18 Sept. 2015.\\
-\verb|http://entomology.k-state.edu/extension/insect-information/crop-pests/wheat/curlmite.html|.
+{\footnotesize\verb|http://entomology.k-state.edu/extension/insect-information/crop-pests/wheat/curlmite.html|.}
 
 \end{document}
