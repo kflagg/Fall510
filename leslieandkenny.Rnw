@@ -126,69 +126,22 @@ Nar conducted this experiment in a MSU field at the base of the Bridger Mountain
 
 \section{Recommendations}
 
-\subsection{Binomial Generalized Linear Model}
+\subsection{Potential Issues with Count Data}
 
-\noindent Because the response variable is a Binomial count, and because
-the design includes random assignment of variety to rows within blocks,
-a Binomial generalized linear model is appropriate. We recommend using
-a three-way interaction to estimate the probability of infection for each
-variety/treatment/inoculation status combination and a block/variety
-interaction to control for differences between blocks and between rows
-in the same block.\\
+\begin{figure}[h!]
+\begin{center}
+\caption{Illustration of separation.}
+<<separation,echo=FALSE,out.width='0.6\\linewidth',fig.width=6>>=
+curve(exp(x)/(1+exp(x)), from = -10, to = 10, ylim = c(0, 1),
+      xlab = expression(logit(p[i])), ylab = expression(p[i]))
+segments(x0 = -10, x1 = log(1/59), y0 = 1/60, lty = 2, lwd = 2)
+segments(x0 = log(1/59), y0 = 0, y1 = 1/60, lty = 2, lwd = 2)
+@
+\end{center}
+\end{figure}
 
-\noindent The model is
-$$
-y_i\sim\mathrm{overdispersed Binomial}(30, p_i, \omega),
-$$
-$$
-\mathrm{logit}(p_i)=\mu+\alpha_{b[i]}+\beta_{v[i]}+\gamma_{t[i]}+\delta_{j[i]}
-+(\alpha\beta)_{b[i],v[i]}+(\beta\gamma)_{v[i],t[i]}+(\beta\delta)_{v[i],j[i]}
-+(\gamma\delta)_{t[i],j[i]}+(\beta\gamma\delta)_{v[i],t[i],j[i]}
-$$
-where
-\begin{itemize}
-\item \(p_i\) is the probability of infection in the \(i\)th plot,
-\item \(\mathrm{logit}(p_i)=\log\left(\dfrac{p_i}{1-p_i}\right)\) is the
-natural logarithm of the odds of infection, and
-\item \(b[i]\), \(v[i]\), \(t[i]\), and \(j[i]\) index the block,
-variety, nitrogen application timing, and inoculation status of
-observation \(i\),
-\item \(\omega\) is an overdispersion parameter, so that the standard
-deviation of the response in plot \(i\) is \(\sqrt{30\omega p_i(1-p_i)}\).
-\end{itemize}
-
-\noindent The assumptions for this model are that plants within a plot
-are independent and have the same probability of being infected, and
-that plots are independent given the other variables in the model. \\
-
-\noindent There are several reasons why we recommend using a fixed-effects
-generalized linear model instead of a generalized linear mixed model;
-these reasons are related to overdispersion and computational issues. \\
-
-\noindent Since the inoculated plants were planted in the center of the
-plots, we expect to see spatial dependence where plants near the centers
-are more likely to become infected than plants further from the centers.
-Then individual plants could have infection probabilities that differ from
-the infection rate estimated for the plot they are in. This would result
-in the data could having more variation than what the Binomial model
-accounts for, a situation known as overdispersion. We observed
-overdispersion in Nar's data, and there are no simple tools
-for including overdispersion in mixed models. Therefore, the standard
-errors in the mixed model output would be based on an incorrect estimate
-of the variance and might not be trustworthy. This problem is easily
-remedied by using a Quasibinomial fixed-effects GLM model. \\
-
-\noindent Additionally, including many coefficients and nested effects
-in a mixed model can cause computational problems where the software will
-fail to find unique solutions for the parameters. These problems are made
-worse in a Binomial GLMM when the counts are small, as in these data. The
-Binomial GLM can avoid many of the computational difficulties associated
-with the GLMM. The GLM can correctly model the nested design through a
-block by variety interaction. \\
-
-\noindent The only advantage of the GLMM is that it would estimate block-
-and row-level variances, but it is our opinion that this is outweighed by
-the lack of an overdispersion estimate and the computational difficulties.
+\noindent The following sections present examples of issues that could
+arise while analyzing Nar's data. The examples all use simulated datasets.
 
 \subsection{Graphical Data Exploration}
 
@@ -234,7 +187,7 @@ has many zeros, Nar should consider whether he has reason to believe
 that treatment or variety has qualitative differences from the others
 that would cause it to have a much lower infection rate. These data would
 be considered as coming from a different population than the data with
-fewer zeros. \textbf{If and only if it is justified}, Nar could omit all
+fewer zeros. \emph{If and only if it is justified}, Nar could omit all
 of the data for this treatment or variety when fitting the model. The scope
 of inference for this model must then be limited to varieties and
 treatments that have a nonzero infection rate. A separate analysis would
@@ -302,15 +255,105 @@ patterns.
 \begin{figure}[h!]
 \caption{Example \texttt{itableplot} output.}
 <<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
-#Warning message:
-#In tableplot_checkCols(substitute(sortCol), colNames) :
-#  Sorting on multiple columns not supported anymore. Only first column is taken.
-tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
-          nBins = 30, sortCol = "variety")
+# Tableplot is confusing. Maybe omit this?
+fert.sim1$v.trt <- with(fert.sim1, interaction(status2, n.trt, variety))
+tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status, v.trt),
+          nBins = 30, sortCol = "v.trt")
 @
 \end{figure}
 
-\subsection{Model Fitting}
+\subsection{Binomial Generalized Linear Model}
+
+\noindent Because the response variable is a Binomial count, and because
+the design includes random assignment of variety to rows within blocks,
+a Binomial generalized linear model is appropriate. We recommend using
+a three-way interaction to estimate the probability of infection for each
+variety/treatment/inoculation status combination and a block/variety
+interaction to control for differences between blocks and between rows
+in the same block.\\
+
+\noindent The model is
+$$
+y_i\sim\text{overdispersed Binomial}(30, p_i, \omega),
+$$
+$$
+\mathrm{logit}(p_i)=\mu+\alpha_{b[i]}+\beta_{v[i]}+\gamma_{t[i]}+\delta_{j[i]}
++(\alpha\beta)_{b[i],v[i]}+(\beta\gamma)_{v[i],t[i]}+(\beta\delta)_{v[i],j[i]}
++(\gamma\delta)_{t[i],j[i]}+(\beta\gamma\delta)_{v[i],t[i],j[i]}
+$$
+where
+\begin{itemize}
+\item \(p_i\) is the probability of infection in the \(i\)th plot,
+\item \(\mathrm{logit}(p_i)=\log\left(\dfrac{p_i}{1-p_i}\right)\) is the
+natural logarithm of the odds of infection, and
+\item \(b[i]\), \(v[i]\), \(t[i]\), and \(j[i]\) index the block,
+variety, nitrogen application timing, and inoculation status of
+observation \(i\),
+\item \(\omega\) is an overdispersion parameter, so that the variance
+of the response in plot \(i\) is \(30\omega p_i(1-p_i)\).
+\end{itemize}
+
+\noindent The assumptions for this model are that plants within a plot
+are independent and have the same probability of being infected, and
+that plots are independent given the other variables in the model. \\
+
+\noindent There are several reasons why we recommend using a fixed-effects
+generalized linear model instead of a generalized linear mixed model;
+these reasons are related to overdispersion and computational issues. \\
+
+\noindent Since the inoculated plants were planted in the center of the
+plots, we expect to see spatial dependence where plants near the centers
+are more likely to become infected than plants further from the centers.
+Then individual plants could have infection probabilities that differ from
+the infection rate estimated for the plot they are in. This would result
+in the data could having more variation than what the Binomial model
+accounts for, a situation known as overdispersion. We observed
+overdispersion in Nar's data, and there are no simple tools
+for including overdispersion in mixed models. Therefore, the standard
+errors in the mixed model output would be based on an incorrect estimate
+of the variance and might not be trustworthy. This problem is easily
+remedied by using a Quasibinomial fixed-effects GLM model. \\
+
+\noindent Additionally, including many coefficients and nested effects
+in a mixed model can cause computational problems where the software will
+fail to find unique solutions for the parameters. These problems are made
+worse in a Binomial GLMM when the counts are small, as in these data. The
+Binomial GLM can avoid many of the computational difficulties associated
+with the GLMM. The GLM can correctly model the nested design through a
+block by variety interaction. \\
+
+\noindent The only advantage of the GLMM is that it would estimate block-
+and row-level variances, but it is our opinion that this is outweighed by
+the lack of an overdispersion estimate and the computational difficulties.
+
+\subsection{Binomial Generalized Linear Mixed Model}
+\label{model2}
+
+\noindent The model is
+$$
+y_i\sim\mathrm{Binomial}(30, p_i),
+$$
+\begin{align*}
+\mathrm{logit}(p_i)&=\mu+a_{b[i]}+(ab)_{b[i],v[i]}\\
+&\quad+\beta_{v[i]}+\gamma_{t[i]}+\delta_{j[i]}\\
+&\quad+(\alpha\beta)_{b[i],v[i]}+(\beta\gamma)_{v[i],t[i]}
++(\beta\delta)_{v[i],j[i]}+(\gamma\delta)_{t[i],j[i]}\\
+&\quad+(\beta\gamma\delta)_{v[i],t[i],j[i]}
+\end{align*}
+where
+\begin{itemize}
+\item \(p_i\) is the probability of infection in the \(i\)th plot,
+\item \(\mathrm{logit}(p_i)=\log\left(\dfrac{p_i}{1-p_i}\right)\) is the
+natural logarithm of the odds of infection, and
+\item \(b[i]\), \(v[i]\), \(t[i]\), and \(j[i]\) index the block,
+variety, nitrogen application timing, and inoculation status of
+observation \(i\),
+\item \(a_b\sim\mathrm{N}(0,\sigma^2_a)\) and
+\((ab)_{b,v}\sim\mathrm{N}(0,\sigma^2_{ab})\) are random adjustments for
+each block and each variety within each block.
+\end{itemize}
+
+\subsection{Fitting the GLM}
 \label{model}
 
 \noindent The following code will fit the three-way interaction model:
@@ -354,6 +397,9 @@ anova(glm2way2, glm3way2)
 @
 
 <<glmms,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=TRUE>>=
+# Experimenting with different random effects.
+# Are all block coefs 0 because they are nonidentified?
+
 glmBin <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
               family = binomial, data = fert2)
 # Warning message:
@@ -393,13 +439,10 @@ glmmVarPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
                                             optCtrl = list("maxfun" = 20000)),
                      family = binomial, data = fert2)
 # Warning messages:
-# 1: In vcov.merMod(object, use.hessian = use.hessian) :
-#   variance-covariance matrix computed from finite-difference Hessian is
-# not positive definite or contains NA values: falling back to var-cov estimated from RX
-# 2: In vcov.merMod(object, correlation = correlation, sigm = sig) :
-#   variance-covariance matrix computed from finite-difference Hessian is
-# not positive definite or contains NA values: falling back to var-cov estimated from RX
-# plot          (Intercept) 1.03818  1.0189
+# 1: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   unable to evaluate scaled gradient
+# 2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   Model failed to converge: degenerate  Hessian with 2 negative eigenvalues# plot          (Intercept) 1.03818  1.0189
 # variety:block (Intercept) 0.28324  0.5322
 # block         (Intercept) 0.00000  0.0000
 # varietySNMS:n.trtLATE SPRING                -20.10372  8008.61084
@@ -500,6 +543,7 @@ cbind(arm::se.coef(glmQBin)[c(1,7:13,34:55)], arm::se.fixef(glmmVar))
 cbind(coef(glmQBin)[c(1,7:13,34:55)], fixef(glmmVar))
 cbind(arm::se.coef(glmQBin)[c(1,7:13,34:55)], arm::se.fixef(glmmVar))
 # Pretty similar. Maybe this is ok?
+# Mark doesn't like it.
 @
 
 <<nosnms,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=FALSE>>=
@@ -533,6 +577,8 @@ plot(resid(noSNMS3way) ~ fitted(noSNMS3way), col = variety,
 legend("topright", pch = 1, col = 1:5,
        legend = levels(fert2$variety))
 @
+
+\subsection{Fitting the GLMM}
 
 \subsection{Model Refinement}
 
