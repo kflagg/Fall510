@@ -13,7 +13,7 @@
 
 \title{\vspace{-2.0cm}The effect of nitrogen application time on infection and development of the Wheat Streak Mosaic Virus (WSMV)}
 \author{Leslie Gains-Germain, Kenny Flagg}
-\date{Spring 2015}
+\date{Fall 2015}
 
 \begin{document}
 <<setup, include=FALSE, cache=FALSE,echo=FALSE>>=
@@ -42,6 +42,9 @@ require(lattice)
 #setwd("~/Documents/ConsultingFall2015/Fall510")
 fert2 <- read.csv("fert2.csv")
 
+# This forces the constraint that the block effects sum to 0
+contrasts(fert2$block) <- contr.sum(6, contrast=TRUE)
+
 # Correctly order nitrogen application levels
 fert2$n.trt <- relevel(fert2$n.application, "FALL")
 
@@ -54,8 +57,11 @@ fert2$variety2 <- relevel(fert2$variety, "YSTN")
 # Create a row factor
 fert2$row <- with(fert2, interaction(variety, block))
 
+# Create a plot factor
+fert2$plot <- factor(1:180)
+
 # Combine nitrogen and inoc/cntl (for the heatmap labels)
-#fert2$n.status <- with(fert2, interaction(n.trt, status))
+fert2$n.status <- with(fert2, interaction(n.trt, status))
 @
 
 <<fakedata,echo=FALSE>>=
@@ -296,6 +302,9 @@ patterns.
 \begin{figure}[h!]
 \caption{Example \texttt{itableplot} output.}
 <<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
+#Warning message:
+#In tableplot_checkCols(substitute(sortCol), colNames) :
+#  Sorting on multiple columns not supported anymore. Only first column is taken.
 tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
           nBins = 30, sortCol = "variety")
 @
@@ -342,6 +351,155 @@ summary(glm2way2)
 Anova(glm3way2, test.statistic = "F")
 Anova(glm2way2, test.statistic = "F")
 anova(glm2way2, glm3way2)
+@
+
+<<glmms,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=TRUE>>=
+glmBin <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+              family = binomial, data = fert2)
+# Warning message:
+# glm.fit: fitted probabilities numerically 0 or 1 occurred
+# Residual deviance: 427.939  on 125  degrees of freedom
+# 427.939 / 125 = 3.423512
+
+glmQBin <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+               family = quasibinomial, data = fert2)
+# No warnings
+# Residual deviance: 427.939  on 125  degrees of freedom
+# (Dispersion parameter for quasibinomial family taken to be 3.2817219)
+
+glmmVar <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+                   (1|block/variety),
+                 control = glmerControl(optimizer = "bobyqa",
+                                        optCtrl = list("maxfun" = 20000)),
+                 family = binomial, data = fert2)
+# Warning messages:
+# 1: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   unable to evaluate scaled gradient
+# 2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   Model failed to converge: degenerate  Hessian with 2 negative eigenvalues
+# variety:block (Intercept) 0.46633  0.68289
+# block         (Intercept) 0.00000  0.00000
+# varietySNMS:n.trtLATE SPRING               -18.53042 2535.76041
+# varietySNMS:status2CNTL                    -18.50610 2527.55827
+# varietySNMS:n.trtEARLY SPRING:status2CNTL   19.11619 2527.55834
+# varietySNMS:n.trtLATE SPRING:status2CNTL    19.07429 4381.94303
+# deviance df.resid
+#    865.7      148
+# 865.7 / 148 = 5.8493243
+
+glmmVarPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+                       (1|block/variety) + (1|plot),
+                     control = glmerControl(optimizer = "bobyqa",
+                                            optCtrl = list("maxfun" = 20000)),
+                     family = binomial, data = fert2)
+# Warning messages:
+# 1: In vcov.merMod(object, use.hessian = use.hessian) :
+#   variance-covariance matrix computed from finite-difference Hessian is
+# not positive definite or contains NA values: falling back to var-cov estimated from RX
+# 2: In vcov.merMod(object, correlation = correlation, sigm = sig) :
+#   variance-covariance matrix computed from finite-difference Hessian is
+# not positive definite or contains NA values: falling back to var-cov estimated from RX
+# plot          (Intercept) 1.03818  1.0189
+# variety:block (Intercept) 0.28324  0.5322
+# block         (Intercept) 0.00000  0.0000
+# varietySNMS:n.trtLATE SPRING                -20.10372  8008.61084
+# varietySNMS:status2CNTL                     -19.96154  7604.01229
+# varietySNMS:n.trtEARLY SPRING:status2CNTL    20.93076  7604.01238
+# varietySNMS:n.trtLATE SPRING:status2CNTL     20.61822 13745.14025
+# deviance df.resid
+#    726.8      147
+# 726.8 / 147 = 4.9442177
+
+glmmRow <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+                   (1|block/row),
+                 control = glmerControl(optimizer = "bobyqa",
+                                        optCtrl = list("maxfun" = 20000)),
+                 family = binomial, data = fert2)
+# Warning messages:
+# 1: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   unable to evaluate scaled gradient
+# 2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   Model failed to converge: degenerate  Hessian with 3 negative eigenvalues
+# row:block (Intercept) 0.46633  0.68289
+# block     (Intercept) 0.00000  0.00000
+# varietySNMS:n.trtLATE SPRING               -18.52017 2522.79684
+# varietySNMS:status2CNTL                    -18.50714 2528.86662
+# varietySNMS:n.trtEARLY SPRING:status2CNTL   19.11723 2528.86668
+# varietySNMS:n.trtLATE SPRING:status2CNTL    19.06600 4374.54075
+# deviance df.resid
+#    865.7      148
+# 865.7 / 148 = 5.8493243
+
+glmmRowPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+                       (1|block/row) + (1|plot),
+                     control = glmerControl(optimizer = "bobyqa",
+                                            optCtrl = list("maxfun" = 20000)),
+                     family = binomial, data = fert2)
+# Warning messages:
+# 1: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   unable to evaluate scaled gradient
+# 2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   Model failed to converge: degenerate  Hessian with 2 negative eigenvalues
+# plot      (Intercept) 1.03818  1.0189
+# row:block (Intercept) 0.28324  0.5322
+# block     (Intercept) 0.00000  0.0000
+# varietySNMS:n.trtLATE SPRING                -20.06813  7867.38080
+# varietySNMS:status2CNTL                     -19.95030  7561.42603
+# varietySNMS:n.trtEARLY SPRING:status2CNTL    20.91952  7561.42612
+# varietySNMS:n.trtLATE SPRING:status2CNTL     20.67575 13394.17908
+# deviance df.resid
+#    726.8      147
+# 726.8 / 147 = 4.9442177
+
+glmmPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|plot),
+                  control = glmerControl(optimizer = "bobyqa",
+                                         optCtrl = list("maxfun" = 20000)),
+                  family = binomial, data = fert2)
+# Warning message:
+# In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   Model is nearly unidentifiable: large eigenvalue ratio
+#  - Rescale variables?
+# plot   (Intercept) 1.3056   1.1426
+# varietySNMS:n.trtLATE SPRING              -19.20256  371.85490
+# varietySNMS:status2CNTL                   -19.21857  211.30941
+# varietySNMS:n.trtEARLY SPRING:status2CNTL  20.44165  211.30904
+# varietySNMS:n.trtLATE SPRING:status2CNTL   19.91369  260.18702
+# deviance df.resid
+#    731.7      149
+# 731.7 / 149 = 4.9107383
+
+glmmVarS <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+                    (variety|block),
+                  control = glmerControl(optimizer = "bobyqa",
+                                         optCtrl = list("maxfun" = 20000)),
+                  family = binomial, data = fert2)
+# Warning messages:
+# 1: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   unable to evaluate scaled gradient
+# 2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+#   Model failed to converge: degenerate  Hessian with 3 negative eigenvalues
+# block  (Intercept) 0.62664  0.79160
+#        varietyPRHN 0.98385  0.99189  -0.933
+#        varietySNMS 3.09082  1.75807  -0.713  0.876
+#        varietyTAM  0.38672  0.62186  -0.471  0.432  0.162
+#        varietyYSTN 0.86358  0.92929  -0.798  0.687  0.277  0.806
+# varietySNMS:n.trtLATE SPRING               -18.54752 2546.52186
+# varietySNMS:status2CNTL                    -18.51916 2537.53981
+# varietySNMS:n.trtEARLY SPRING:status2CNTL   19.13402 2537.53988
+# varietySNMS:n.trtLATE SPRING:status2CNTL    19.08471 4406.80309
+# deviance df.resid
+#    842.8      135
+# 842.8 / 135 = 6.2422222
+
+# Compare coefs and SEs
+cbind(coef(glmQBin)[c(1,7:13,34:55)], fixef(glmmVar))
+cbind(arm::se.coef(glmQBin)[c(1,7:13,34:55)], arm::se.fixef(glmmVar))
+# Most of the quasibinomial SEs are less than twice as big as the glmm SEs
+
+# Now with plot-level REs
+cbind(coef(glmQBin)[c(1,7:13,34:55)], fixef(glmmVar))
+cbind(arm::se.coef(glmQBin)[c(1,7:13,34:55)], arm::se.fixef(glmmVar))
+# Pretty similar. Maybe this is ok?
 @
 
 <<nosnms,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=FALSE>>=
