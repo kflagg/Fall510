@@ -25,6 +25,7 @@ opts_chunk$set(fig.width = 10, fig.height = 4, out.width = '\\linewidth',
                size = 'footnotesize')
 options(replace.assign = TRUE, width = 112, digits = 3, max.print = '202',
         show.signif.stars = FALSE)
+knit_theme$set('print')
 
 require(xtable)
 #require(foreign)
@@ -42,13 +43,13 @@ require(lattice)
 fert2 <- read.csv("fert2.csv")
 
 # Correctly order nitrogen application levels
-fert2$n.trt <- relevel(fert2$n.application, 'FALL')
+fert2$n.trt <- relevel(fert2$n.application, "FALL")
 
 # If status=INOC is the most interesting case, make INOC the baseline
-fert2$status2 <- relevel(fert2$status, 'INOC')
+fert2$status2 <- relevel(fert2$status, "INOC")
 
 # If YSTN is the variety we want to know about the most, make it baseline
-fert2$variety2 <- relevel(fert2$variety, 'YSTN')
+fert2$variety2 <- relevel(fert2$variety, "YSTN")
 
 # Create a row factor
 fert2$row <- with(fert2, interaction(variety, block))
@@ -60,22 +61,22 @@ fert2$row <- with(fert2, interaction(variety, block))
 <<fakedata,echo=FALSE>>=
 # Create some fake data with no differences anywhere
 set.seed(983724)
-fert.sim1 <- data.frame(
-  'block' = c(rep('A', 30), rep('B', 30), rep('C', 30), rep('D', 30), rep('E', 30), rep('F', 30)),
-  'variety' = c(rep('Var1', 6), rep('Var2', 6), rep('Var3', 6), rep('Var4', 6), rep('Var5', 6)),
-  'n.application' = rep(c('FALL', 'FALL', 'EARLY SPRING', 'EARLY SPRING', 'LATE SPRING', 'LATE SPRING'), 30),
-  'status' = rep(c('CNTL', 'INOC'), 90),
-  'total' = rep(30, 180),
-  'infected' = rnbinom(180, 4, 7/9))
-#  'infected' = sample(fert2$infected, 180, replace = TRUE))
+fert.sim1 <- data.frame(expand.grid(
+  "status" = c("CNTL", "INOC"),
+  "n.application" = c("FALL", "EARLY SPRING", "LATE SPRING"),
+  "variety" = c("Var1", "Var2", "Var3", "Var4", "Var5"),
+  "block" = LETTERS[1:6],
+  "total" = 30),
+  "infected" = rnbinom(180, 4, 7/9))
+#  "infected" = sample(fert2$infected, 180, replace = TRUE))
 @
 
 <<fakepre,echo=FALSE>>=
 # Correctly order nitrogen application levels, the default is alphabetical
-fert.sim1$n.trt <- relevel(fert.sim1$n.application, 'FALL')
+fert.sim1$n.trt <- relevel(fert.sim1$n.application, "FALL")
 
 # If status=INOC is the most interesting case, make INOC the baseline
-fert.sim1$status2 <- relevel(fert.sim1$status, 'INOC')
+fert.sim1$status2 <- relevel(fert.sim1$status, "INOC")
 
 # This forces the constraint that the block effects sum to 0
 contrasts(fert.sim1$block) <- contr.sum(6, contrast=TRUE)
@@ -131,7 +132,7 @@ in the same block.\\
 
 \noindent The model is
 $$
-y_i\sim\mathrm{Binomial}(30, p_i),
+y_i\sim\mathrm{overdispersed Binomial}(30, p_i, \omega),
 $$
 $$
 \mathrm{logit}(p_i)=\mu+\alpha_{b[i]}+\beta_{v[i]}+\gamma_{t[i]}+\delta_{j[i]}
@@ -145,7 +146,9 @@ where
 natural logarithm of the odds of infection, and
 \item \(b[i]\), \(v[i]\), \(t[i]\), and \(j[i]\) index the block,
 variety, nitrogen application timing, and inoculation status of
-observation \(i\).
+observation \(i\),
+\item \(\omega\) is an overdispersion parameter, so that the standard
+deviation of the response in plot \(i\) is \(\sqrt{30\omega p_i(1-p_i)}\).
 \end{itemize}
 
 \noindent The assumptions for this model are that plants within a plot
@@ -197,7 +200,7 @@ combination of factor levels. The \verb|qplot| function in the
 \caption{Example interaction plot using \texttt{qplot}.}
 <<interactionplot,echo=FALSE,message=FALSE,out.height='0.3\\linewidth',fig.height=3>>=
 require(ggplot2)
-qplot(x = n.trt, y = infected, geom = c('boxplot', 'point'), color = status,
+qplot(x = n.trt, y = infected, geom = c("boxplot", "point"), color = status,
       facets = .~variety, data = fert.sim1) +
   theme(axis.text.x = element_text(angle = 90))
 @
@@ -254,16 +257,16 @@ image(z = infected.arranged, y = 1:6,
       x = seq(0.5, 5.5, 1/6),
 
       # Use black for 0, and use heatmap colors (red-orange-yellow-white) for 1 to 30
-      col = c('black', heat.colors(30)), zlim = c(0, 30),
+      col = c("black", heat.colors(30)), zlim = c(0, 30),
 
       # Don't automatically create axes or labels
-      xlab = '', ylab = '', yaxt = 'n', xaxt = 'n')
+      xlab = "", ylab = "", yaxt = "n", xaxt = "n")
 
 # Use white line segments to visually separate the varieties
-segments(x0 = 1.5:4.5, y0 = 0.5, y1 = 6.5, col = 'white')
+segments(x0 = 1.5:4.5, y0 = 0.5, y1 = 6.5, col = "white")
 
 # Place a title at the top, and label Varieties, treatment:status levels, and blocks around the image
-title('Infection Counts', line = 4)
+title("Infection Counts", line = 4)
 axis(3, labels = rep(levels(fert.ordered$block), 5), cex.axis = 0.75,
 
      # Each block is plotted in a column with width 1/6, so put the labels in the middle
@@ -273,9 +276,9 @@ axis(1, labels = levels(fert.ordered$variety), at = 1:5)
 
 # Legend
 par(mar = c(3, 1, 6, 2))
-image(y = seq(-0.5, 30.5, 1), z = matrix(0:30, nrow = 1), axes = FALSE, ylab = '',
-      col = c('#000000', heat.colors(30)), zlim = c(0, 30))
-title('Legend', line = 1.5)
+image(y = seq(-0.5, 30.5, 1), z = matrix(0:30, nrow = 1), axes = FALSE, ylab = "",
+      col = c("#000000", heat.colors(30)), zlim = c(0, 30))
+title("Legend", line = 1.5)
 axis(4)
 @
 \end{figure}
@@ -294,7 +297,7 @@ patterns.
 \caption{Example \texttt{itableplot} output.}
 <<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
 tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
-          nBins = 30, sortCol = variety)
+          nBins = 30, sortCol = "variety")
 @
 \end{figure}
 
@@ -304,7 +307,7 @@ tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status),
 \noindent The following code will fit the three-way interaction model:
 
 <<startingmodel,warning=FALSE,results='hide',cache=TRUE>>=
-glm3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt*status2,
+glm3way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
                family = quasibinomial, data = fert.sim1)
 @
 
@@ -313,7 +316,7 @@ resistant population and can be omitted from the current analysis:
 
 <<novar1,warning=FALSE,results='hide',cache=TRUE>>=
 noVar1 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
-              family = quasibinomial, data = fert.sim1, subset = variety!='Var1')
+              family = quasibinomial, data = fert.sim1, subset = variety!="Var1")
 @
 
 \noindent If there is no interest in comparing between inoculated plots and
@@ -321,10 +324,10 @@ control plots, separate models could be fit:
 
 <<separatemodels,warning=FALSE,results='hide',cache=TRUE>>=
 onlyINOC <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
-                family = quasibinomial, data = fert.sim1, subset = status=='INOC')
+                family = quasibinomial, data = fert.sim1, subset = status=="INOC")
 
 onlyCNTL <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
-                family = quasibinomial, data = fert.sim1, subset = status=='CNTL')
+                family = quasibinomial, data = fert.sim1, subset = status=="CNTL")
 @
 
 <<models5,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=TRUE>>=
@@ -336,8 +339,8 @@ glm2way2 <- glm(cbind(infected, total) ~ block*variety + (variety+n.trt+status2)
                 family = quasibinomial, data = fert2)
 summary(glm2way2)
 
-Anova(glm3way2, test.statistic = 'F')
-Anova(glm2way2, test.statistic = 'F')
+Anova(glm3way2, test.statistic = "F")
+Anova(glm2way2, test.statistic = "F")
 anova(glm2way2, glm3way2)
 @
 
@@ -345,15 +348,15 @@ anova(glm2way2, glm3way2)
 table(fert2$infected==0,fert2$variety)
 
 noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
-                    (1|block/row), subset = variety != 'SNMS',
-                    control = glmerControl(optimizer = 'bobyqa'),
+                    (1|block/row), subset = variety != "SNMS",
+                    control = glmerControl(optimizer = "bobyqa"),
                     family = binomial, data = fert2)
 summary(noSNMS3way)
 Anova(noSNMS3way)
 
 noSNMS2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status2 +
-                    n.trt*status2 + (1|block/row), subset = variety != 'SNMS',
-                    control = glmerControl(optimizer = 'bobyqa'),
+                    n.trt*status2 + (1|block/row), subset = variety != "SNMS",
+                    control = glmerControl(optimizer = "bobyqa"),
                     family = binomial, data = fert2)
 summary(noSNMS2way)
 Anova(noSNMS2way)
@@ -366,13 +369,12 @@ par(mfrow = c(2, 2))
 plot(resid(glm3way2) ~ predict(glm3way2), col = variety, data = fert2)
 plot(resid(glm3way2) ~ fitted(glm3way2), col = variety, data = fert2)
 plot(resid(noSNMS3way) ~ predict(noSNMS3way), col = variety,
-     data = fert2, subset = variety!='SNMS')
+     data = fert2, subset = variety!="SNMS")
 plot(resid(noSNMS3way) ~ fitted(noSNMS3way), col = variety,
-     data = fert2, subset = variety!='SNMS')
-legend('topright', pch = 1, col = 1:5,
+     data = fert2, subset = variety!="SNMS")
+legend("topright", pch = 1, col = 1:5,
        legend = levels(fert2$variety))
 @
-
 
 \subsection{Model Refinement}
 
@@ -398,8 +400,7 @@ Anova(glm3way, test="F")
 $block*variety$ interaction.''
 
 <<glmnointeractions, echo=TRUE>>=
-glmnointeractions <- glm(cbind(infected, total) ~ block/variety + variety+n.trt
-                         + status2,
+glmnointeractions <- glm(cbind(infected, total) ~ block*variety + variety + n.trt + status2,
                family = quasibinomial, data = fert.sim1)
 Anova(glmnointeractions, test="F")
 @
@@ -407,7 +408,7 @@ Anova(glmnointeractions, test="F")
 \noindent The next section describes how to interpret effects once a model is selected.
 
 <<dropindevftest, echo=FALSE>>=
-glm.no3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt + n.trt*status2 + variety*status2,
+glm.no3way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt + n.trt*status2 + variety*status2,
                family = quasibinomial, data = fert.sim1)
 #drop in dev F-test
 #((196-185)/8)/(185/125)
@@ -425,12 +426,12 @@ glm.no3way <- glm(cbind(infected, total) ~ block/variety + variety*n.trt + n.trt
 \begin{figure}[!h]
 <<plots2,echo=FALSE,warning=FALSE,message=FALSE,out.height='0.5\\linewidth',fig.height=5, fig.align='center'>>=
 require(effects)
-plot(Effect(c('variety','n.trt','status2'), glm3way),
-     multiline = TRUE, type = 'response', se = TRUE, ci.style='bars',
-     x.var = 'n.trt', rotx = 45, layout = c(5, 1),
-     main = 'Variety/Treatment/Inoculation Effects Plot',
-     xlab = 'Nitrogen Application Date', ylab = 'Infection Probability',
-     key.args = list(title = 'Inoculation Status'))
+plot(Effect(c("variety", "n.trt", "status2"), glm3way),
+     multiline = TRUE, type = "response", se = TRUE, ci.style="bars",
+     x.var = "n.trt", rotx = 45, layout = c(5, 1),
+     main = "Variety/Treatment/Inoculation Effects Plot",
+     xlab = "Nitrogen Application Date", ylab = "Infection Probability",
+     key.args = list(title = "Inoculation Status"))
 @
 \caption{The fitted model can be nicely summarized with plots from the \texttt{effects} package.}
 \end{figure}
@@ -438,7 +439,7 @@ plot(Effect(c('variety','n.trt','status2'), glm3way),
 \noindent The \verb+Effect+ function is convenient because it provides the estimated probabilities at each treatment combination, averaged over all blocks. The results are  provided in a organized table (see below).
 
 <<summary, echo=TRUE>>=
-Effect(c('variety','n.trt','status2'), glm3way, se=TRUE)
+Effect(c("variety", "n.trt", "status2"), glm3way, se=TRUE)
 @
 
 \noindent We recommend displaying the effects plot and output and then describing the effects of interest in words. When describing the effects in words, we recommend describing the effects in terms of multiplicative changes in the odds of virus infection. It is more straightforward to calculate confidence intervals when effects are described are this scale rather than the probability scale. We recommend changing the reference level of the model to find the estimates and confidence intervals for the effects of interest. Notice that when we fit the model in Section \ref{model}, we specified the constraint that the sum of the block effects would add to $0$. As a result, the estimated effects given in the model summary are the effects averaged over all blocks. \\
