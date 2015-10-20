@@ -39,7 +39,7 @@ require(lattice)
 <<data,echo=FALSE>>=
 # Read and set up the data
 #for leslie
-#setwd("~/Documents/ConsultingFall2015/Fall510")
+setwd("~/Documents/ConsultingFall2015/Fall510")
 fert2 <- read.csv("fert2.csv")
 
 # This forces the constraint that the block effects sum to 0
@@ -586,27 +586,67 @@ In this section, we describe how to go through the process of model selection. A
 
 \noindent We'll start by assessing evidence for the three-way interaction term. One way to consider it's removal would be to fit a model without the three-way interaction, and then conduct a drop-in-deviance F-test comparing the full and reduced models, as you learned to do in Stat $512$. This method can be time consuming, so instead we recommend using the \verb+Anova+ function in the \verb+car+ package with the option \verb+test="F"+. This provides a {\bf Type II} sums of squares table, and the tests provided are similar to extra sums of squares F-tests based on the Pearson residuals.
 %(provide reference here to info about pearson resids vs deviance resids)
-The tests in this table are conditional upon terms of the same and lower order being in the model. For example, the \verb+n.trt:status2+ row in the table tests for removal of the $n.trt*status2$ two-way interaction, conditional upon all other two way interactions and main effects being in the model. As a result, this table can be used to assess evidence for removal of each term.
+The tests in this table are conditional upon terms of the same and lower order being in the model. For example, the \verb+n.trt:status2+ row in the table tests for removal of the $n.trt*status2$ two-way interaction, conditional upon all other two way interactions and main effects being in the model. These tables can be used to assess all the effects at the same level together. If you choose to remove a term, however, it is important to fit a new model and reconsider the Anova table every time a simpler model is selected. This is necessary because the estimate of overdispersion changes when the model changes, causing the tests in the table to change as well. \\
 
-<<refine, echo=TRUE>>=
+\noindent For example, if we drop the $3$ way interaction term, the model with all the two-way interactions is fit and the Anova table is considered. 
+
+<<anovadisplay, echo=TRUE, results='hide'>>=
 Anova(glm3way, test="F")
 @
 
-\noindent Here is how we would interpret the results in each row of the table. Note, it is not appropriate to consider removal of any of the terms involving block. Block to block variability is expected because it was included as a design variable, and so it should be included in the model. The $block*variety$ interaction also needs to be included to account for the nesting structure in the design.
+
+<<refine, echo=FALSE, results='asis'>>=
+print(xtable(Anova(glm3way, test="F"), caption="Anova table for the $3$ way interaction model."), caption.placement = "top")
+@
+
+<<anovadisplay2, echo=TRUE, results='hide'>>=
+glm2way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt 
+               + variety*status2+n.trt*status2,
+               family = quasibinomial, data = fert.sim1)
+Anova(glm2way, test="F")
+@
+
+<<refitno3way, echo=FALSE, results='asis'>>=
+print(xtable(Anova(glm2way, test="F"), caption="Anova table for the model with all $2$ way interactions."), caption.placement = "top")
+@
+
+\noindent Here is how we would interpret the results in the rows of interest in the above tables. Note, it is not appropriate to consider removal of any of the terms involving block. Block to block variability is expected because it was included as a design variable, and so it should be included in the model. The $block*variety$ interaction also needs to be included to account for the nesting structure in the design.
 \begin{enumerate}
 \item \verb+variety:n.trt:status2+ ``There is no evidence that the interaction between variety and nitrogen application time differs between inoculated and control plots (p-value$=0.388$ from F-stat$=1.07$ on $8$ and $125$ df).''
-\item \verb+n.trt:status2+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions in the model (p-value$=0.368$ from F-stat$=1.01$ on $2$ and $133$ df).
-\item \verb+variety:status2+ ``There is no evidence that the relationship between variety and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions in the model (p-value$=0.288$ from F-stat$=1.26$ on $4$ and $133$ df).
-\item \verb+variety:n.trt+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all other two way interactions in the model (p-value$=0.453$ from F-stat$=0.98$ on $8$ and $133$ df).
+\item \verb+n.trt:status2+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions and main effects in the model (p-value$=0.380$ from F-stat$=0.973$ on $2$ and $133$ df).
+\item \verb+variety:status2+ ``There is no evidence that the relationship between variety and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions and main effects in the model (p-value$=0.304$ from F-stat$=1.22$ on $4$ and $133$ df).
+\item \verb+variety:n.trt+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all other two way interactions and main effects in the model (p-value$=0.478$ from F-stat$=0.950$ on $8$ and $133$ df).
 \end{enumerate}
+
+\noindent If you remove another term from the model, refit the simpler model and reassess evidence for each effect. For example, suppose we remove the variety by inoculation status interaction term. Our assessment of the variety by nitrogen application interaction effect in the following simpler model would be, ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all main effects and the two way interaction between variety and inoculation status (p-value$=0.4536$ from F-stat$=0.98$ on $8$ and $135$ df).
+
+
+<<refitno2way, echo=FALSE, results='asis'>>=
+glm2way2 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt 
+               + variety*status2,
+               family = quasibinomial, data = fert.sim1)
+print(xtable(Anova(glm2way2, test="F"), caption="Anova table for the model with two way interactions between variety and nitrogen and variety and inoculation status."), caption.placement = "top")
+@
+
+<<refitno2way3, echo=FALSE, results='asis', include=FALSE>>=
+glm2way3 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
+               family = quasibinomial, data = fert.sim1)
+print(xtable(Anova(glm2way3, test="F"), caption="Anova table for the model with a two way interaction between variety and nitrogen application time."), caption.placement = "top")
+@
+
+
 
 \noindent If no evidence is found for any of the interactions, the simplest model we recommend fitting should contain the $block*variety$ interaction and all main effects (shown below). If this model is selected, each effect is then interpreted after controlling for the effects of the other variables in the model. For example, to assess evidence for the \verb+n.trt+ effect in this model, we would say, ``There is no evidence that the odds of virus infection depends on nitrogen application time after controlling for block, variety, inoculation status, and the
 $block*variety$ interaction.''
 
-<<glmnointeractions, echo=TRUE>>=
+<<glmnointeractions, echo=TRUE, results='hide'>>=
 glmnointeractions <- glm(cbind(infected, total) ~ block*variety + variety + n.trt + status2,
                family = quasibinomial, data = fert.sim1)
 Anova(glmnointeractions, test="F")
+@
+
+<<glmnointeractions2, echo=FALSE, results='asis'>>=
+print(xtable(Anova(glmnointeractions, test="F"), caption="Anova table for the model with no interactions."), caption.placement="top")
 @
 
 \noindent The next section describes how to interpret effects once a model is selected.
