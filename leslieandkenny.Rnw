@@ -245,22 +245,7 @@ axis(4)
 \noindent If information about the physical layout of the field is
 available, it would be possible to construct a similar heatmap to look
 for spatial patterns. If correlation between nearby plots is seen,
-the model should be modified to account for this. \\
-
-\noindent Another option for examining the data graphically is the
-\verb|itableplot| function in the \verb|tabplot| package. This is a
-useful interactive tool for visualizing large datasets and identifying
-patterns.
-
-\begin{figure}[h!]
-\caption{Example \texttt{itableplot} output.}
-<<tabplot,echo=FALSE,warning=FALSE,message=FALSE>>=
-# Tableplot is confusing. Maybe omit this?
-fert.sim1$v.trt <- with(fert.sim1, interaction(status2, n.trt, variety))
-tableplot(fert.sim1, select = c(infected, variety, block, n.trt, status, v.trt),
-          nBins = 30, sortCol = "v.trt")
-@
-\end{figure}
+the model should be modified to account for this.
 
 \subsection{Binomial Generalized Linear Model}
 
@@ -352,6 +337,8 @@ observation \(i\),
 \((ab)_{b,v}\sim\mathrm{N}(0,\sigma^2_{ab})\) are random adjustments for
 each block and each variety within each block.
 \end{itemize}
+
+\subsection{Comparison of the GLM and the GLMM}
 
 \subsection{Fitting the GLM}
 \label{model}
@@ -540,8 +527,8 @@ cbind(arm::se.coef(glmQBin)[c(1,7:13,34:55)], arm::se.fixef(glmmVar))
 # Most of the quasibinomial SEs are less than twice as big as the glmm SEs
 
 # Now with plot-level REs
-cbind(coef(glmQBin)[c(1,7:13,34:55)], fixef(glmmVar))
-cbind(arm::se.coef(glmQBin)[c(1,7:13,34:55)], arm::se.fixef(glmmVar))
+cbind(coef(glmQBin)[c(1,7:13,34:55)], fixef(glmmVarPlot))
+cbind(arm::se.coef(glmQBin)[c(1,7:13,34:55)], arm::se.fixef(glmmVarPlot))
 # Pretty similar. Maybe this is ok?
 # Mark doesn't like it.
 @
@@ -588,7 +575,7 @@ In this section, we describe how to go through the process of model selection. A
 %(provide reference here to info about pearson resids vs deviance resids)
 The tests in this table are conditional upon terms of the same and lower order being in the model. For example, the \verb+n.trt:status2+ row in the table tests for removal of the $n.trt*status2$ two-way interaction, conditional upon all other two way interactions and main effects being in the model. These tables can be used to assess all the effects at the same level together. If you choose to remove a term, however, it is important to fit a new model and reconsider the Anova table every time a simpler model is selected. This is necessary because the estimate of overdispersion changes when the model changes, causing the tests in the table to change as well. \\
 
-\noindent For example, if we drop the $3$ way interaction term, the model with all the two-way interactions is fit and the Anova table is considered. 
+\noindent For example, if we drop the $3$ way interaction term, the model with all the two-way interactions is fit and the Anova table is considered.
 
 <<anovadisplay, echo=TRUE, results='hide'>>=
 Anova(glm3way, test="F")
@@ -600,7 +587,7 @@ print(xtable(Anova(glm3way, test="F"), caption="Anova table for the $3$ way inte
 @
 
 <<anovadisplay2, echo=TRUE, results='hide'>>=
-glm2way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt 
+glm2way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt
                + variety*status2+n.trt*status2,
                family = quasibinomial, data = fert.sim1)
 Anova(glm2way, test="F")
@@ -622,7 +609,7 @@ print(xtable(Anova(glm2way, test="F"), caption="Anova table for the model with a
 
 
 <<refitno2way, echo=FALSE, results='asis'>>=
-glm2way2 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt 
+glm2way2 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt
                + variety*status2,
                family = quasibinomial, data = fert.sim1)
 print(xtable(Anova(glm2way2, test="F"), caption="Anova table for the model with two way interactions between variety and nitrogen and variety and inoculation status."), caption.placement = "top")
