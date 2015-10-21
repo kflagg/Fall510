@@ -39,7 +39,7 @@ require(lattice)
 <<data,echo=FALSE>>=
 # Read and set up the data
 #for leslie
-setwd("~/Documents/ConsultingFall2015/Fall510")
+#setwd("~/Documents/ConsultingFall2015/Fall510")
 fert2 <- read.csv("fert2.csv")
 
 # This forces the constraint that the block effects sum to 0
@@ -94,9 +94,7 @@ contrasts(fert.sim1$block) <- contr.sum(6, contrast=TRUE)
 \newpage
 
 \section{Introduction}
-\noindent
 
-\section{Statistical Experience and Assistance Needed}
 \noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently sitting in on Mixed Models. Nar has asked for our help in building a model, fitting it in R, and interpreting the results.
 
 \section{Objectives and Questions}
@@ -128,20 +126,61 @@ Nar conducted this experiment in a MSU field at the base of the Bridger Mountain
 
 \subsection{Potential Issues with Count Data}
 
+The response variable is the count of infected leaves out of the 30 leaves
+collected in each plot. The standard approach to analyzing count data is
+to use a Binomial distribution and model the probability \(p_i\) that a leaf
+in a given plot \(i\) will get infected. This modeling occurs on the scale
+of the log-odds, \(\mathrm{logit}(p_i)=\log\left(\frac{p_i}{1-p_i}\right)\). \\
+
+\noindent One serious problem that can occur when working with counts is
+the issue of separation. This is when one variable or a combination of factors
+is perfectly associated with the response. For example, if a certain
+treatment results in an infection count of zero, then knowing that a leaf
+recieved that treatment determines that the leaf will not get infected,
+regardless of other variables. This causes difficulty in estimating the
+effect of that treatment on the infection rate, and results a large standard
+error because the effect cannot be precisely determined. \\
+
+\noindent Figure 1 provides a visual illustration of the separation problem.
+The left panel shows a small probability on the vertical axis and its
+corresponding logit value on the horizontal axis. The right panel zooms
+in on the lower left corner. The dotted lines show how a small amount
+of uncertainty on the probability scale translates to a relatively larger
+amount of uncertainty on the logit scale. \\
+
 \begin{figure}[h!]
 \begin{center}
 \caption{Illustration of separation.}
-<<separation,echo=FALSE,out.width='0.6\\linewidth',fig.width=6>>=
+<<separation,echo=FALSE>>=
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 2))
 curve(exp(x)/(1+exp(x)), from = -10, to = 10, ylim = c(0, 1),
       xlab = expression(logit(p[i])), ylab = expression(p[i]))
 segments(x0 = -10, x1 = log(1/59), y0 = 1/60, lty = 2, lwd = 2)
 segments(x0 = log(1/59), y0 = 0, y1 = 1/60, lty = 2, lwd = 2)
+
+curve(exp(x)/(1+exp(x)), from = -10, to = -2, ylim = c(0, 0.4),
+      xlab = expression(logit(p[i])), ylab = expression(p[i]))
+segments(x0 = -10, x1 = log(1/59), y0 = 1/60, lty = 2, lwd = 2)
+segments(x0 = log(1/59), y0 = 0, y1 = 1/60, lty = 2, lwd = 2)
+segments(x0 = -10, x1 = log(1/39), y0 = 1/40, lty = 3, lwd = 1)
+segments(x0 = log(1/39), y0 = 0, y1 = 1/40, lty = 3, lwd = 1)
+segments(x0 = -10, x1 = log(1/119), y0 = 1/120, lty = 3, lwd = 1)
+segments(x0 = log(1/119), y0 = 0, y1 = 1/120, lty = 3, lwd = 1)
 @
 \end{center}
 \end{figure}
 
+\noindent The problem gets worse if the infected count is 0. In that
+case, the best estimate of the infection probability is 0, and
+\(\mathrm{logit}(0)=-\infty\). This will cause computational problems
+because the software will try to improve the model fit by decreasing
+the effect estimate toward \(-\infty\). The software may fail to find a
+solution, and if it does report a solution, the standard error will be
+large because the solution cannot be found precisely. \\
+
 \noindent The following sections present examples of issues that could
-arise while analyzing Nar's data. The examples all use simulated datasets.
+arise while analyzing Nar's data, and our recommendations on dealing with
+them. The examples all use simulated datasets.
 
 \subsection{Graphical Data Exploration}
 
@@ -165,33 +204,13 @@ qplot(x = n.trt, y = infected, geom = c("boxplot", "point"), color = status,
 @
 \end{figure}
 
-\noindent We noticed that infection counts of 0 were recorded in 67 of the
-180 plots in Nar's dataset. This is a large fraction of the data; if the
-distribution of these zeros is related to the variables in the model then
-it may be impossible to estimate coefficients for factor levels where
-infection rates are nearly zero. \\
-
-\noindent We recommend sorting the data and creating a heatmap to look
-for patterns of zeros. Figure 2 shows an example using simulated data.
-The most serious problems will come from the zeros, so we chose a contrasting
-color (black) for plots with infection counts of 0.\\
-
-\noindent Any treatment or variety with many black squares is a reason
-for concern. In the example, all but one of the inoculated fall-application
-plots for Var1 had counts of 0. The software will have difficulty estimating
-the the three-way interaction involving fall nitrogen application and
-variety 1. \\
-
-\noindent If a treatment has many zeros across all varieties or a variety
-has many zeros, Nar should consider whether he has reason to believe
-that treatment or variety has qualitative differences from the others
-that would cause it to have a much lower infection rate. These data would
-be considered as coming from a different population than the data with
-fewer zeros. \emph{If and only if it is justified}, Nar could omit all
-of the data for this treatment or variety when fitting the model. The scope
-of inference for this model must then be limited to varieties and
-treatments that have a nonzero infection rate. A separate analysis would
-be needed for the more resistant population. \\
+\noindent A graphical analysis is also a good way to see if separation
+is present in the data. In Nar's dataset, 67 of the 180 counts are
+0. This is a large fraction of the data, so it is very important to look
+for possible separation. We recommend sorting the data and creating a
+heatmap to look for patterns of zeros. Figure 2 shows an example using
+simulated data. The most serious problems will come from the zeros, so we
+chose a contrasting color (black) for plots with infection counts of 0. \\
 
 \begin{figure}[h!]
 \caption{Example heatmap visualization for identifying patterns of zeros.}
@@ -242,6 +261,27 @@ axis(4)
 @
 \end{figure}
 
+\noindent Any treatment or variety with many black squares is a reason
+for concern. In the example, all but one of the inoculated fall-application
+plots for Var1 had counts of 0. The software will have difficulty estimating
+the the three-way interaction involving fall nitrogen application and
+variety 1. \\
+
+\noindent If a treatment has many zeros across all varieties or a variety
+has many zeros, Nar should consider whether he has reason to believe
+that treatment or variety has qualitative differences from the others
+that would cause it to have a much lower infection rate. These data would
+be considered as coming from a different population than the data with
+fewer zeros. \emph{If and only if it is justified}, Nar could omit all
+of the data for this treatment or variety when fitting the model. The scope
+of inference for this model must then be limited to varieties and
+treatments that have a nonzero infection rate. \\
+
+\noindent The graphic could be presented as evidence that the omitted
+data does not fit the same model as the data with higher infection counts.
+A separate analysis would be needed if additional information is desired
+about the more resistant population. \\
+
 \noindent If information about the physical layout of the field is
 available, it would be possible to construct a similar heatmap to look
 for spatial patterns. If correlation between nearby plots is seen,
@@ -261,11 +301,13 @@ in the same block.\\
 $$
 y_i\sim\text{overdispersed Binomial}(30, p_i, \omega),
 $$
-$$
-\mathrm{logit}(p_i)=\mu+\alpha_{b[i]}+\beta_{v[i]}+\gamma_{t[i]}+\delta_{j[i]}
-+(\alpha\beta)_{b[i],v[i]}+(\beta\gamma)_{v[i],t[i]}+(\beta\delta)_{v[i],j[i]}
-+(\gamma\delta)_{t[i],j[i]}+(\beta\gamma\delta)_{v[i],t[i],j[i]}
-$$
+\begin{align*}
+\mathrm{logit}(p_i)&=\mu+\alpha_{b[i]}+\beta_{v[i]}
++\gamma_{t[i]}+\delta_{j[i]}\\
+&\quad+(\alpha\beta)_{b[i],v[i]}+(\beta\gamma)_{v[i],t[i]}
++(\beta\delta)_{v[i],j[i]}+(\gamma\delta)_{t[i],j[i]}
++(\beta\gamma\delta)_{v[i],t[i],j[i]}
+\end{align*}
 where
 \begin{itemize}
 \item \(p_i\) is the probability of infection in the \(i\)th plot,
@@ -319,11 +361,11 @@ $$
 y_i\sim\mathrm{Binomial}(30, p_i),
 $$
 \begin{align*}
-\mathrm{logit}(p_i)&=\mu+a_{b[i]}+(ab)_{b[i],v[i]}\\
-&\quad+\beta_{v[i]}+\gamma_{t[i]}+\delta_{j[i]}\\
+\mathrm{logit}(p_i)&=\mu+a_{b[i]}+(ab)_{b[i],v[i]}
++\beta_{v[i]}+\gamma_{t[i]}+\delta_{j[i]}\\
 &\quad+(\alpha\beta)_{b[i],v[i]}+(\beta\gamma)_{v[i],t[i]}
-+(\beta\delta)_{v[i],j[i]}+(\gamma\delta)_{t[i],j[i]}\\
-&\quad+(\beta\gamma\delta)_{v[i],t[i],j[i]}
++(\beta\delta)_{v[i],j[i]}+(\gamma\delta)_{t[i],j[i]}
++(\beta\gamma\delta)_{v[i],t[i],j[i]}
 \end{align*}
 where
 \begin{itemize}
