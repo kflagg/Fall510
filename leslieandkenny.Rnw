@@ -39,7 +39,7 @@ require(lattice)
 <<data,echo=FALSE>>=
 # Read and set up the data
 #for leslie
-setwd("~/Documents/ConsultingFall2015/Fall510")
+#setwd("~/Documents/ConsultingFall2015/Fall510")
 fert2 <- read.csv("fert2.csv")
 
 # This forces the constraint that the block effects sum to 0
@@ -95,12 +95,12 @@ contrasts(fert.sim1$block) <- contr.sum(6, contrast=TRUE)
 
 \section{Introduction}
 
-\noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently sitting in on Mixed Models. Nar has asked for our help in building a model, fitting it in R, and interpreting the results.
+\noindent Nar B. Ranabhat is a PhD candidate in the Department of Land Resources and Environmental Science. He is currently working on several projects regarding the spread and development of the Wheat Streak Mosaic Virus (WSMV) in Winter Wheat. Nar has taken Statistics $511$ and $512$ here at Montana State University, and he is currently sitting in on Mixed Models. Nar has asked for our help in building a model, fitting it in R, and interpreting the results. In this report we describe the study and its potential issues, present our recommendations, and provide example R code.
 
 \section{Objectives and Questions}
 \noindent Nar is interested in the effect of variety, nitrogen application time, and inoculation on the probability of virus infection in Winter Wheat. He is primarily interested in the effect of nitrogen application time, and he wants to assess evidence for all possible two and three way interactions. Nar's goal is to select the simplest possible model, and then use this model to describe the effects of the above variables. \\
 
-We address the following questions in this report. The first three questions are related to model selection, and the last question is related to interpretation after a model is selected.
+\noindent We address the following questions in this report. The first three questions are related to model selection, and the last question is related to interpretation after a model is selected.
 \begin{itemize}
 \item Is there evidence that the interaction between nitrogen application and variety differs between inoculated and control plots?
 \item Is there evidence that the nitrogen application effect varies across varieties? Is there evidence that the nitrogen application effect differs between inoculated and control?
@@ -133,25 +133,26 @@ in a given plot \(i\) will get infected. This modeling occurs on the scale
 of the log-odds, \(\mathrm{logit}(p_i)=\log\left(\frac{p_i}{1-p_i}\right)\). \\
 
 \noindent One serious problem that can occur when working with counts is
-the issue of separation. This is when one variable or a combination of factors
+separation. This is when one variable or a combination of factors
 is perfectly associated with the response. For example, if a certain
 treatment results in an infection count of zero, then knowing that a leaf
-recieved that treatment determines that the leaf will not get infected,
+received that treatment determines that the leaf will not get infected,
 regardless of other variables. This causes difficulty in estimating the
-effect of that treatment on the infection rate, and results a large standard
+effect of that treatment on the infection rate, and results in a large standard
 error because the effect cannot be precisely determined. \\
 
-\noindent Figure 1 provides a visual illustration of the separation problem.
-The left panel shows a small probability on the vertical axis and its
-corresponding logit value on the horizontal axis. The right panel zooms
-in on the lower left corner. The dotted lines show how a small amount
-of uncertainty on the probability scale translates to a relatively larger
-amount of uncertainty on the logit scale. \\
+\noindent Figure 1 provides a visual illustration of the
+separation problem. The left panel shows a small probability on the
+vertical axis and its corresponding logit value on the horizontal axis.
+The right panel zooms in on the lower left corner. The dotted lines show
+how a small amount of uncertainty on the probability scale translates to
+a relatively larger amount of uncertainty on the logit scale. \\
 
 \begin{figure}[h!]
+\label{sep}
 \begin{center}
 \caption{Illustration of separation.}
-<<separation,echo=FALSE>>=
+<<separation,echo=FALSE,out.height='0.3\\linewidth',fig.height=3>>=
 par(mfrow = c(1, 2), mar = c(4, 4, 2, 2))
 curve(exp(x)/(1+exp(x)), from = -10, to = 10, ylim = c(0, 1),
       xlab = expression(logit(p[i])), ylab = expression(p[i]))
@@ -180,7 +181,7 @@ large because the solution cannot be found precisely. \\
 
 \noindent The following sections present examples of issues that could
 arise while analyzing Nar's data, and our recommendations on dealing with
-them. The examples all use simulated datasets.
+them. Except where stated otherwise, the examples use simulated datasets.
 
 \subsection{Graphical Data Exploration}
 
@@ -195,6 +196,7 @@ combination of factor levels. The \verb|qplot| function in the
 \verb|ggplot2| package is a simple way to do this. \\
 
 \begin{figure}[h!]
+\label{qp}
 \caption{Example interaction plot using \texttt{qplot}.}
 <<interactionplot,echo=FALSE,message=FALSE,out.height='0.3\\linewidth',fig.height=3>>=
 require(ggplot2)
@@ -206,13 +208,15 @@ qplot(x = n.trt, y = infected, geom = c("boxplot", "point"), color = status,
 
 \noindent A graphical analysis is also a good way to see if separation
 is present in the data. In Nar's dataset, 67 of the 180 counts are
-0. This is a large fraction of the data, so it is very important to look
-for possible separation. We recommend sorting the data and creating a
-heatmap to look for patterns of zeros. Figure 2 shows an example using
+0. This is a large fraction of the data, so it is very important to identify
+possible separation. We recommend sorting the data and creating a
+heatmap to look for patterns of zeros. Figure 3 shows an example using
 simulated data. The most serious problems will come from the zeros, so we
-chose a contrasting color (black) for plots with infection counts of 0. \\
+chose a contrasting color (black) for plots with infection counts of 0.
+The R code to produce this graphic appears in the appendix. \\
 
 \begin{figure}[h!]
+\label{hm}
 \caption{Example heatmap visualization for identifying patterns of zeros.}
 <<heatmap,echo=FALSE,message=FALSE,out.height='0.3\\linewidth',fig.height=3>>=
 ## Heatmap with meaningful ordering
@@ -272,7 +276,7 @@ has many zeros, Nar should consider whether he has reason to believe
 that treatment or variety has qualitative differences from the others
 that would cause it to have a much lower infection rate. These data would
 be considered as coming from a different population than the data with
-fewer zeros. \emph{If and only if it is justified}, Nar could omit all
+fewer zeros. \textbf{If and only if it is justified}, Nar could omit all
 of the data for this treatment or variety when fitting the model. The scope
 of inference for this model must then be limited to varieties and
 treatments that have a nonzero infection rate. \\
@@ -287,15 +291,13 @@ available, it would be possible to construct a similar heatmap to look
 for spatial patterns. If correlation between nearby plots is seen,
 the model should be modified to account for this.
 
-\subsection{Binomial Generalized Linear Model}
+\subsection{Quasibinomial Generalized Linear Model}
 
-\noindent Because the response variable is a Binomial count, and because
-the design includes random assignment of variety to rows within blocks,
-a Binomial generalized linear model is appropriate. We recommend using
-a three-way interaction to estimate the probability of infection for each
-variety/treatment/inoculation status combination and a block/variety
-interaction to control for differences between blocks and between rows
-in the same block.\\
+\noindent We recommend starting with a quasibinomial generalized linear
+model. This model includes a three-way interaction to estimate the
+infection probability for each variety/treatment/inoculation status
+combination, and a block/variety interaction to control for differences
+between blocks and between rows in the same block.\\
 
 \noindent The model is
 $$
@@ -324,8 +326,24 @@ of the response in plot \(i\) is \(30\omega p_i(1-p_i)\).
 are independent and have the same probability of being infected, and
 that plots are independent given the other variables in the model. \\
 
+\noindent The overdispersion parameter accounts for slight violations
+of these assumptions. We expect the plants within a single plot to
+have different infection probabilities based on their proximity to
+plants where mites are present. This issue manifests itself in the form
+of excess variation because the probability that a particular plant
+gets infected will not be the same as the estimated probability for
+plants in its plot. The overdispersion is an estimate of this extra
+variability; without it the standard errors will be underestimated. \\
+
 \subsection{Binomial Generalized Linear Mixed Model}
 \label{model2}
+
+\noindent Another option is to use random effects to model the nested
+structure of row within block. This model includes a three-way
+interaction of fixed effects and does not include an overdispersion
+parameter. In mixed models, the random effects are meant to explain
+all the variation in the data, so overdispersed models are not
+used in this setting. \\
 
 \noindent The model is
 $$
@@ -351,6 +369,19 @@ observation \(i\),
 each block and each variety within each block.
 \end{itemize}
 
+\noindent The assumptions for this model are that plants within a plot
+are independent and have the same probability of being infected, that
+blocks are independent, that rows in different blocks are independent, that
+plots in different rows are independent given the other variables in the
+model, and that there are no additional sources of variation besides
+block, row, and the Binomial distribution for the infection counts. \\
+
+\noindent This model accounts for block-to-block and row-to-row variation
+by including variance terms for the block and row random effects. The
+benefit of this is that the amount of variation described by the blocks
+and rows will be estimated. The drawback is that, if there is additional
+variation not explained by these random effects, the model will fit poorly.
+
 \subsection{Advantage of the Quasibinomial Generalized Linear Model over the Binomial Generalized Linear Mixed Model}
 
 \noindent There are several reasons why we recommend using a fixed-effects
@@ -361,14 +392,14 @@ plots, we expect to see spatial dependence where plants near the centers
 are more likely to become infected than plants further from the center.
 Then individual plants could have infection probabilities that differ from
 the infection rate estimated for the plot they are in. This would result
-in the data could having more variation than what the Binomial model
-accounts for, a situation known as overdispersion. We observed
-overdispersion in Nar's data, and there are no simple tools
-for including overdispersion in mixed models. Therefore, the standard
-errors in the mixed model output would be based on an incorrect estimate
-of the variance and might not be trustworthy. The standard errors in the GLMM model would be smaller than they should be, causing the p-values for effects of interest to be artificially small. This problem is easily remedied by using a quasibinomial fixed-effects GLM model. \\
+in the data having more variation than what the Binomial model accounts for,
+a situation known as overdispersion. We observed overdispersion in Nar's
+data, and mixed models have limited ability to account for overdispersion
+beyond what can be explained by the variables in the model. Therefore,
+the standard errors in the mixed model output would be based on an
+incorrect estimate of the variance and might not be trustworthy. The standard errors in the GLMM model would be smaller than they should be, causing the p-values for effects of interest to be artificially small. This problem is easily remedied by using a quasibinomial fixed-effects GLM model. \\
 
-\noindent We illustrate this problem in the output below. We fit a quasibinomial logistic regression model, and a binomial generalized linear mixed effects model to the real data sent to us by Nar (details on model fitting in section \ref{model} and \ref{glmmfit}). The coefficients, standard errors, and tests are shown for the three way interaction coefficients in each model. The estimates are similar between the two models, but the standard errors are much larger in the quasibinomial GLM model. Without accounting for overdispersion, the standard errors for the estimates in the mixed effects model are artificially small. For this reason, we advise Nar not to trust the results from the mixed effects model.
+\noindent We illustrate this problem in the output below. We fit a quasibinomial logistic regression model, and a binomial generalized linear mixed effects model to the real data sent to us by Nar (details on model fitting in section \ref{model} and \ref{glmmfit}). The coefficients, standard errors, and tests are shown for the three way interaction coefficients in each model. The estimates are similar between the two models, but the standard errors are much larger in the quasibinomial GLM model. Without accounting for overdispersion, the standard errors for the estimates in the mixed effects model are too small. For this reason, we advise Nar not to trust the results from the mixed effects model.
 
 <<comparison, echo=FALSE, message=FALSE, results='asis'>>=
 glmQBin.noSNMS <- glm(cbind(infected, total) ~ block*variety +
@@ -384,7 +415,6 @@ noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
 print(xtable(summary(noSNMS3way)$coefficients[19:24,], caption="Estimates, standard errors, and tests for three way interaction coefficients in the GLMER model", label="glmer"), caption.placement="top", size="footnotesize", table.placement = getOption("xtable.table.placement", "H"))
 @
 
-
 \noindent Additionally, including many coefficients and nested effects
 in a mixed model can cause computational problems where the software will
 fail to find unique solutions for the parameters. These problems are made
@@ -392,13 +422,14 @@ worse in a binomial GLMM when the counts are small, as in these data. The
 binomial GLM can avoid many of the computational difficulties associated
 with the GLMM.  \\
 
-\noindent Rows are nested within blocks in the study design, and each row is randomly assigned to a variety. The design's nesting structure can be accounted for in a GLMM model  by including random effects for row and block. Originally, however, random effects were developed to reflect a feature of the study design. For example, if $10$ operators were chosen at random from a larger population of operators, {\it operator} would be modeled as a random effect. In this case, the sample of operators truly is random in the design, and the operators selected are intended to represent a larger population of operators. In Nar's study design, row and block are not truly random effects because they were not selected from a larger population of rows and blocks. It is important to recognize this and understand that the only reason row and block are included as random effects in the GLMM model is to account for the nesting structure of row within block. As a result, we think it is more appropriate to model the nested design using fixed effects in the binomial generalized linear model, and this strategy is more consistent with the study design. \\
+\noindent Rows are nested within blocks in the study design, and each row is randomly assigned to a variety. The nesting structure of the design can be accounted for in a GLMM model  by including random effects for row and block. Originally, however, random effects were developed to reflect a feature of the study design. For example, if $10$ operators were chosen at random from a larger population of operators, {\it operator} would be modeled as a random effect. In this case, the sample of operators truly is random in the design, and the operators selected are intended to represent a larger population of operators. In Nar's study design, row and block are not truly random effects because they were not selected from a larger population of rows and blocks. It is important to recognize this and understand that the only reason row and block are included as random effects in the GLMM model is to account for the nesting structure of row within block. As a result, we think it is more appropriate to model the nested design using fixed effects in the binomial generalized linear model, and this strategy is more consistent with the study design. \\
 
 \noindent The binomial GLM can correctly model the nested design through a block by variety interaction. In the GLM model, it is possible to include a \verb+block/variety+ term, and this is equivalent to including the \verb+block*variety+ interaction. Including this interaction accounts for the nesting because it allows the differences in varieties to vary by block.  \\
 
 \noindent The main advantages of the GLMM is that it would estimate block-
 and row-level variances, and it would require fewer degrees of freedom to account for the nesting structure in the design. It is our opinion that this is outweighed by the lack of an overdispersion estimate and the computational difficulties.
 
+\pagebreak
 \subsection{Fitting the GLM}
 \label{model}
 
@@ -409,8 +440,10 @@ glm3way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
                family = quasibinomial, data = fert.sim1)
 @
 
-\noindent If it is decided that certain observations come from an extremely
-resistant population and can be omitted from the current analysis:
+\noindent The summary output should be examined for unexpectedly large
+estimates or standard errors. A warning message may or may not appear in
+this situation. If it is decided that certain observations come from an
+extremely resistant population and can be omitted from the current analysis:
 
 <<novar1,warning=FALSE,results='hide',cache=TRUE>>=
 noVar1 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
@@ -441,6 +474,74 @@ Anova(glm3way2, test.statistic = "F")
 Anova(glm2way2, test.statistic = "F")
 anova(glm2way2, glm3way2)
 @
+
+\subsection{Fitting the GLMM}
+\label{glmmfit}
+
+To fit the three-way interaction model:
+
+<<glmm1,eval=FALSE>>=
+glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/variety),
+                  control = glmerControl(optimizer = "bobyqa"),
+                  family = binomial, data = fert.sim1)
+@
+
+\noindent The \verb|control = glmerControl(optimizer = "bobyqa")| argument
+tells the \verb|glmer| function which numerical optimizer to use to find
+the estimates. Several optimizers are included with R, but \verb|bobyqa|
+works well on problems that are mathematically difficult. We recommend using
+it for all \verb|glmer| fits. \\
+
+\noindent The following warning message will probably appear:
+
+<<glmmhide1,echo=FALSE,cache=TRUE>>=
+glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/variety),
+                  control = glmerControl(optimizer = "bobyqa"),
+                  family = binomial, data = fert.sim1)
+@
+
+\noindent This message alone does not indicate any problems, but it
+appears because the model has a large number of parameters, which could
+cause the numerical optimizer to take many iterations to converge. By
+default, the algorithm will run for a maximum of 10,000 iterations. That
+number can be increased by specifying a larger \verb|maxfun| option:
+
+<<glmm2,eval=FALSE>>=
+glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/variety),
+                  control = glmerControl(optimizer = "bobyqa",
+                                         optCtrl = list("maxfun" = 20000)),
+                  family = binomial, data = fert.sim1)
+@
+
+\noindent If a warning message says something like ``maximum number of
+function evaluations exceeded'' or mentions ``max$\lvert$grad$\rvert$''
+and a tolerance level, then the optimizer ran for the full number of
+iterations without finding a solution. Increasing \verb|maxfun| as above
+may solve the problem. \\
+
+\noindent If messages about eigenvalues or ``unable to evaluate scaled
+gradient'' occur:
+
+<<glmmhide2,echo=FALSE,cache=TRUE>>=
+glmmPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|plot),
+                  control = glmerControl(optimizer = "bobyqa",
+                                         optCtrl = list("maxfun" = 20000)),
+                  family = binomial, data = fert2)
+glmmVar <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+                   (1|block/variety),
+                 control = glmerControl(optimizer = "bobyqa",
+                                        optCtrl = list("maxfun" = 20000)),
+                 family = binomial, data = fert2)
+@
+
+\noindent These indicate that unique coefficient estimates do not exist.
+This is most likely caused by separation, so the output should be
+examined for large standard errors. The best solution would be to fit
+a simpler model (such as one with fewer interaction terms) or to remove
+problematic variables or data. The decision to remove any terms or data
+must be justified by prior knowledge and not based on the R output.
+If this cannot be justified, then the generalized linear mixed model should
+not be used. \\
 
 <<glmms,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=TRUE>>=
 # Experimenting with different random effects.
@@ -624,14 +725,11 @@ legend("topright", pch = 1, col = 1:5,
        legend = levels(fert2$variety))
 @
 
-\subsection{Fitting the GLMM}
-\label{glmmfit}
-
 \subsection{Model Refinement}
 
-In this section, we describe how to go through the process of model selection. As discussed in the previous section, we recommend starting with the most complicated three-way interaction model and then assessing which terms can be removed. In general, start by considering removal of the highest order terms. \\
+In this section, we describe how to go through the process of model selection. As discussed in the previous sections, we recommend starting with the most complicated three-way interaction model and then assessing which terms can be removed. In general, start by considering removal of the highest order terms. \\
 
-\noindent We'll start by assessing evidence for the three-way interaction term. One way to consider it's removal would be to fit a model without the three-way interaction, and then conduct a drop-in-deviance F-test comparing the full and reduced models, as you learned to do in Stat $512$. This method can be time consuming, so instead we recommend using the \verb+Anova+ function in the \verb+car+ package with the option \verb+test="F"+. This provides a {\bf Type II} sums of squares table, and the tests provided are similar to extra sums of squares F-tests based on the Pearson residuals.
+\noindent We'll start by assessing evidence for the three-way interaction term. One way to consider its removal would be to fit a model without the three-way interaction, and then conduct a drop-in-deviance F-test comparing the full and reduced models, as you learned to do in Stat $512$. This method can be time consuming, so instead we recommend using the \verb+Anova+ function in the \verb+car+ package with the option \verb+test="F"+. This provides a {\bf Type II} sums of squares table, and the tests provided are similar to extra sums of squares F-tests based on the Pearson residuals.
 %(provide reference here to info about pearson resids vs deviance resids)
 The tests in this table are conditional upon terms of the same and lower order being in the model. For example, the \verb+n.trt:status2+ row in the table tests for removal of the $n.trt*status2$ two-way interaction, conditional upon all other two way interactions and main effects being in the model. These tables can be used to assess all the effects at the same level together. If you choose to remove a term, however, it is important to fit a new model and reconsider the Anova table every time a simpler model is selected. This is necessary because the estimate of overdispersion changes when the model changes, causing the tests in the table to change as well. \\
 
@@ -842,6 +940,7 @@ and blocks.
 <<plots2,eval=FALSE>>=
 @
 
+\pagebreak
 \section{References}
 %\noindent Ramsey, F.L., Schafer, D.W. (2013). {\it The Statistical Sleuth: A Course in Methods of Data Analysis, Third Edition}. Boston, MA: Brooks/Cole, Cengage Learning.\\
 
@@ -856,7 +955,7 @@ University Press.\\
 
 \noindent Ramsey, F.L., Schafer, D.W. (2013). {\it The Statistical Sleuth: A Course in Methods of Data Analysis, Third Edition}. Boston, MA: Brooks/Cole, Cengage Learning.\\
 
-\noindent Sloderbeck, J., Michaud, P., Whitworth, Robert. "Wheat Pests." CurlMite. Kansas State University, 1 May 2008. Web. 18 Sept. 2015.\\
+\noindent Sloderbeck, J., Michaud, P., Whitworth, Robert. ``Wheat Pests.'' CurlMite. Kansas State University, 1 May 2008. Web. 18 Sept. 2015.\\
 {\footnotesize\verb|http://entomology.k-state.edu/extension/insect-information/crop-pests/wheat/curlmite.html|.}
 
 \end{document}
