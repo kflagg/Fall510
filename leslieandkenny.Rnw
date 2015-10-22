@@ -727,7 +727,9 @@ legend("topright", pch = 1, col = 1:5,
 
 \subsection{Model Refinement}
 
-In this section, we describe how to go through the process of model selection. As discussed in the previous sections, we recommend starting with the most complicated three-way interaction model and then assessing which terms can be removed. In general, start by considering removal of the highest order terms. \\
+In this section, we describe how to go through the process of model selection. As discussed in the previous section, we recommend starting with the most complicated  model and then assessing which terms can be removed. In general, start by considering removal of the highest order terms. \\
+
+\noindent Warning: the results reported in this section are from simulated data. This section is meant to be used as an example that can be followed when working with the real dataset. \\
 
 \noindent We'll start by assessing evidence for the three-way interaction term. One way to consider its removal would be to fit a model without the three-way interaction, and then conduct a drop-in-deviance F-test comparing the full and reduced models, as you learned to do in Stat $512$. This method can be time consuming, so instead we recommend using the \verb+Anova+ function in the \verb+car+ package with the option \verb+test="F"+. This provides a {\bf Type II} sums of squares table, and the tests provided are similar to extra sums of squares F-tests based on the Pearson residuals.
 %(provide reference here to info about pearson resids vs deviance resids)
