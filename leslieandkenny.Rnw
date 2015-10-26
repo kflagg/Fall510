@@ -75,6 +75,7 @@ fert.sim1 <- data.frame(expand.grid(
   "total" = 30),
   "infected" = rnbinom(180, 4, 7/9))
 #  "infected" = sample(fert2$infected, 180, replace = TRUE))
+fert.sim1$uninfected <- with(fert.sim1, total - infected)
 @
 
 <<fakepre,echo=FALSE>>=
@@ -402,12 +403,12 @@ incorrect estimate of the variance and might not be trustworthy. The standard er
 \noindent We illustrate this problem in the output below. We fit a quasibinomial logistic regression model, and a binomial generalized linear mixed effects model to the real data sent to us by Nar (details on model fitting in section \ref{model} and \ref{glmmfit}). The coefficients, standard errors, and tests are shown for the three way interaction coefficients in each model. The estimates are similar between the two models, but the standard errors are much larger in the quasibinomial GLM model. Without accounting for overdispersion, the standard errors for the estimates in the mixed effects model are too small. For this reason, we advise Nar not to trust the results from the mixed effects model.
 
 <<comparison, echo=FALSE, message=FALSE, results='asis'>>=
-glmQBin.noSNMS <- glm(cbind(infected, total) ~ block*variety +
+glmQBin.noSNMS <- glm(cbind(infected, uninfected) ~ block*variety +
                         variety*n.trt*status2,
                family = quasibinomial, data = subset(fert2, variety != "SNMS"))
 print(xtable(summary(glmQBin.noSNMS)$coefficients[39:44,], caption="Estimates, standard errors, and tests for three way interaction coefficients in the quasibinomial model.", label="qbin"), caption.placement="top", size="footnotesize", table.placement = getOption("xtable.table.placement", "H"))
 
-noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+noSNMS3way <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 +
                     (1|block/row), subset = variety != "SNMS",
                     control = glmerControl(optimizer = "bobyqa"),
                     family = binomial, data = fert2)
@@ -436,7 +437,7 @@ and row-level variances, and it would require fewer degrees of freedom to accoun
 \noindent The following code will fit the three-way interaction model:
 
 <<startingmodel,warning=FALSE,results='hide',cache=TRUE>>=
-glm3way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+glm3way <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt*status2,
                family = quasibinomial, data = fert.sim1)
 @
 
@@ -446,7 +447,7 @@ this situation. If it is decided that certain observations come from an
 extremely resistant population and can be omitted from the current analysis:
 
 <<novar1,warning=FALSE,results='hide',cache=TRUE>>=
-noVar1 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+noVar1 <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt*status2,
               family = quasibinomial, data = fert.sim1, subset = variety!="Var1")
 @
 
@@ -454,19 +455,19 @@ noVar1 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
 control plots, separate models could be fit:
 
 <<separatemodels,warning=FALSE,results='hide',cache=TRUE>>=
-onlyINOC <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
+onlyINOC <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt,
                 family = quasibinomial, data = fert.sim1, subset = status=="INOC")
 
-onlyCNTL <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
+onlyCNTL <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt,
                 family = quasibinomial, data = fert.sim1, subset = status=="CNTL")
 @
 
 <<models5,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=TRUE>>=
-glm3way2 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+glm3way2 <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt*status2,
                 family = quasibinomial, data = fert2)
 summary(glm3way2)
 
-glm2way2 <- glm(cbind(infected, total) ~ block*variety + (variety+n.trt+status2)^2,
+glm2way2 <- glm(cbind(infected, uninfected) ~ block*variety + (variety+n.trt+status2)^2,
                 family = quasibinomial, data = fert2)
 summary(glm2way2)
 
@@ -481,7 +482,7 @@ anova(glm2way2, glm3way2)
 To fit the three-way interaction model:
 
 <<glmm1,eval=FALSE>>=
-glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/variety),
+glmm3way <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 + (1|block/variety),
                   control = glmerControl(optimizer = "bobyqa"),
                   family = binomial, data = fert.sim1)
 @
@@ -495,7 +496,7 @@ it for all \verb|glmer| fits. \\
 \noindent The following warning message will probably appear:
 
 <<glmmhide1,echo=FALSE,cache=TRUE>>=
-glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/variety),
+glmm3way <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 + (1|block/variety),
                   control = glmerControl(optimizer = "bobyqa"),
                   family = binomial, data = fert.sim1)
 @
@@ -507,7 +508,7 @@ default, the algorithm will run for a maximum of 10,000 iterations. That
 number can be increased by specifying a larger \verb|maxfun| option:
 
 <<glmm2,eval=FALSE>>=
-glmm3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|block/variety),
+glmm3way <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 + (1|block/variety),
                   control = glmerControl(optimizer = "bobyqa",
                                          optCtrl = list("maxfun" = 20000)),
                   family = binomial, data = fert.sim1)
@@ -523,11 +524,11 @@ may solve the problem. \\
 gradient'' occur:
 
 <<glmmhide2,echo=FALSE,cache=TRUE>>=
-glmmPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|plot),
+glmmPlot <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 + (1|plot),
                   control = glmerControl(optimizer = "bobyqa",
                                          optCtrl = list("maxfun" = 20000)),
                   family = binomial, data = fert2)
-glmmVar <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+glmmVar <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 +
                    (1|block/variety),
                  control = glmerControl(optimizer = "bobyqa",
                                         optCtrl = list("maxfun" = 20000)),
@@ -547,20 +548,20 @@ not be used. \\
 # Experimenting with different random effects.
 # Are all block coefs 0 because they are nonidentified?
 
-glmBin <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+glmBin <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt*status2,
               family = binomial, data = fert2)
 # Warning message:
 # glm.fit: fitted probabilities numerically 0 or 1 occurred
 # Residual deviance: 427.939  on 125  degrees of freedom
 # 427.939 / 125 = 3.423512
 
-glmQBin <- glm(cbind(infected, total) ~ block*variety + variety*n.trt*status2,
+glmQBin <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt*status2,
                family = quasibinomial, data = fert2)
 # No warnings
 # Residual deviance: 427.939  on 125  degrees of freedom
 # (Dispersion parameter for quasibinomial family taken to be 3.2817219)
 
-glmmVar <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+glmmVar <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 +
                    (1|block/variety),
                  control = glmerControl(optimizer = "bobyqa",
                                         optCtrl = list("maxfun" = 20000)),
@@ -580,7 +581,7 @@ glmmVar <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
 #    865.7      148
 # 865.7 / 148 = 5.8493243
 
-glmmVarPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+glmmVarPlot <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 +
                        (1|block/variety) + (1|plot),
                      control = glmerControl(optimizer = "bobyqa",
                                             optCtrl = list("maxfun" = 20000)),
@@ -600,7 +601,7 @@ glmmVarPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
 #    726.8      147
 # 726.8 / 147 = 4.9442177
 
-glmmRow <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+glmmRow <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 +
                    (1|block/row),
                  control = glmerControl(optimizer = "bobyqa",
                                         optCtrl = list("maxfun" = 20000)),
@@ -620,7 +621,7 @@ glmmRow <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
 #    865.7      148
 # 865.7 / 148 = 5.8493243
 
-glmmRowPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+glmmRowPlot <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 +
                        (1|block/row) + (1|plot),
                      control = glmerControl(optimizer = "bobyqa",
                                             optCtrl = list("maxfun" = 20000)),
@@ -641,7 +642,7 @@ glmmRowPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
 #    726.8      147
 # 726.8 / 147 = 4.9442177
 
-glmmPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|plot),
+glmmPlot <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 + (1|plot),
                   control = glmerControl(optimizer = "bobyqa",
                                          optCtrl = list("maxfun" = 20000)),
                   family = binomial, data = fert2)
@@ -658,7 +659,7 @@ glmmPlot <- glmer(cbind(infected, total) ~ variety*n.trt*status2 + (1|plot),
 #    731.7      149
 # 731.7 / 149 = 4.9107383
 
-glmmVarS <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+glmmVarS <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 +
                     (variety|block),
                   control = glmerControl(optimizer = "bobyqa",
                                          optCtrl = list("maxfun" = 20000)),
@@ -696,14 +697,14 @@ cbind(arm::se.coef(glmQBin)[c(1,7:13,34:55)], arm::se.fixef(glmmVarPlot))
 <<nosnms,echo=FALSE,warning=FALSE,message=FALSE,results='hide',cache=FALSE>>=
 table(fert2$infected==0,fert2$variety)
 
-noSNMS3way <- glmer(cbind(infected, total) ~ variety*n.trt*status2 +
+noSNMS3way <- glmer(cbind(infected, uninfected) ~ variety*n.trt*status2 +
                     (1|block/row), subset = variety != "SNMS",
                     control = glmerControl(optimizer = "bobyqa"),
                     family = binomial, data = fert2)
 summary(noSNMS3way)
 Anova(noSNMS3way)
 
-noSNMS2way <- glmer(cbind(infected, total) ~ variety*n.trt + variety*status2 +
+noSNMS2way <- glmer(cbind(infected, uninfected) ~ variety*n.trt + variety*status2 +
                     n.trt*status2 + (1|block/row), subset = variety != "SNMS",
                     control = glmerControl(optimizer = "bobyqa"),
                     family = binomial, data = fert2)
@@ -737,7 +738,7 @@ The tests in this table are conditional upon terms of the same and lower order b
 
 \noindent The Anova table for the three-way interaction model is shown below (Table \ref{3way}). This table should only be used to assess evidence for the three-way interaction term. We recommend the following wording,
 \begin{quote}
-There is no evidence that the interaction between variety and nitrogen application time differs between inoculated and control plots (p-value$=0.388$ from F-stat$=1.07$ on $8$ and $125$ df).
+There is no evidence that the interaction between variety and nitrogen application time differs between inoculated and control plots (p-value$=0.406$ from F-stat$=1.05$ on $8$ and $125$ df).
 \end{quote}
 
 <<anovadisplay, echo=TRUE, results='hide'>>=
@@ -753,7 +754,7 @@ print(xtable(Anova(glm3way, test="F"), caption="Anova table for the $3$ way inte
 \noindent If you drop the $3$ way interaction term, the model with all the two-way interactions should be fit and the Anova table analysis should be repeated.
 
 <<anovadisplay2, echo=TRUE, results='hide'>>=
-glm2way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt
+glm2way <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt
                + variety*status2+n.trt*status2,
                family = quasibinomial, data = fert.sim1)
 Anova(glm2way, test="F")
@@ -765,24 +766,24 @@ print(xtable(Anova(glm2way, test="F"), caption="Anova table for the model with a
 
 \noindent Here is how we would interpret the results in the applicable rows in the above the two-way interaction Anova table (Table \ref{twoway}).
 \begin{enumerate}
-\item \verb+n.trt:status2+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions and main effects in the model (p-value$=0.380$ from F-stat$=0.973$ on $2$ and $133$ df).
-\item \verb+variety:status2+ ``There is no evidence that the relationship between variety and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions and main effects in the model (p-value$=0.304$ from F-stat$=1.22$ on $4$ and $133$ df).
-\item \verb+variety:n.trt+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all other two way interactions and main effects in the model (p-value$=0.478$ from F-stat$=0.950$ on $8$ and $133$ df).
+\item \verb+n.trt:status2+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions and main effects in the model (p-value$=0.386$ from F-stat$=0.959$ on $2$ and $133$ df).
+\item \verb+variety:status2+ ``There is no evidence that the relationship between variety and the odds of virus infection differs between inoculated and control plots after controlling for all other two way interactions and main effects in the model (p-value$=0.302$ from F-stat$=1.23$ on $4$ and $133$ df).
+\item \verb+variety:n.trt+ ``There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all other two way interactions and main effects in the model (p-value$=0.465$ from F-stat$=0.967$ on $8$ and $133$ df).
 \end{enumerate}
 
 \noindent If you remove another term from the model, refit the simpler model and reassess evidence for each effect. For example, suppose we remove the variety by inoculation status interaction term (Table \ref{remove}). Our assessment of the variety by nitrogen application interaction effect in the following simpler model would be,
 \begin{quote}
-There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all main effects and the two way interaction between variety and inoculation status (p-value$=0.4536$ from F-stat$=0.98$ on $8$ and $135$ df).
+There is no evidence that the relationship between nitrogen application time and the odds of virus infection depends on variety after controlling for all main effects and the two way interaction between variety and inoculation status (p-value$=0.440$ from F-stat$=0.999$ on $8$ and $135$ df).
 \end{quote}
 <<refitno2way, echo=FALSE, results='asis'>>=
-glm2way2 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt
+glm2way2 <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt
                + variety*status2,
                family = quasibinomial, data = fert.sim1)
 print(xtable(Anova(glm2way2, test="F"), caption="Anova table for the model with two way interactions between variety and nitrogen and variety and inoculation status.", label="remove"), caption.placement = "top", size='footnotesize', table.placement = getOption("xtable.table.placement", "H"))
 @
 
 <<refitno2way3, echo=FALSE, results='asis', include=FALSE>>=
-glm2way3 <- glm(cbind(infected, total) ~ block*variety + variety*n.trt,
+glm2way3 <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt,
                family = quasibinomial, data = fert.sim1)
 print(xtable(Anova(glm2way3, test="F"), caption="Anova table for the model with a two way interaction between variety and nitrogen application time."), caption.placement = "top", table.placement = getOption("xtable.table.placement", "H"))
 @
@@ -791,11 +792,11 @@ print(xtable(Anova(glm2way3, test="F"), caption="Anova table for the model with 
 
 \noindent To assess evidence for the \verb+n.trt+ effect in the simplest recommended model, we would say,
 \begin{quote}
-There is no evidence that the odds of virus infection depends on nitrogen application time after controlling for block, variety, inoculation status, and the $block*variety$ interaction (p-value$=0.612$ from F-stat$=0.49$ on $2$ and $147$ df).
+There is no evidence that the odds of virus infection depends on nitrogen application time after controlling for block, variety, inoculation status, and the $block*variety$ interaction (p-value$=0.633$ from F-stat$=0.459$ on $2$ and $147$ df).
 \end{quote}
 
 <<glmnointeractions, echo=TRUE, results='hide'>>=
-glmnointeractions <- glm(cbind(infected, total) ~ block*variety + variety + n.trt + status2,
+glmnointeractions <- glm(cbind(infected, uninfected) ~ block*variety + variety + n.trt + status2,
                family = quasibinomial, data = fert.sim1)
 Anova(glmnointeractions, test="F")
 @
@@ -807,7 +808,7 @@ print(xtable(Anova(glmnointeractions, test="F"), caption="Anova table for the mo
 \noindent The next section describes how to interpret effects once a model is selected.
 
 <<dropindevftest, echo=FALSE>>=
-glm.no3way <- glm(cbind(infected, total) ~ block*variety + variety*n.trt + n.trt*status2 + variety*status2,
+glm.no3way <- glm(cbind(infected, uninfected) ~ block*variety + variety*n.trt + n.trt*status2 + variety*status2,
                family = quasibinomial, data = fert.sim1)
 #drop in dev F-test
 #((196-185)/8)/(185/125)
@@ -856,7 +857,7 @@ exp(confint(glm3way, 12))
 
 \noindent For these data, we would describe the nitrogen application effect for inoculated plants of variety $1$ as follows:
 \begin{quote}
-For inoculated plants of variety $1$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be $3.01$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.295$ to $104.9$ times. For inoculated plants of variety $1$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $5.05$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.652$ to $166.4$ times.
+For inoculated plants of variety $1$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be $3.04$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.264$ to $136.6$ times. For inoculated plants of variety $1$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $5.13$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.604$ to $218.4$ times.
 \end{quote}
 
 <<second, echo=TRUE, message=FALSE, eval=FALSE>>=
@@ -865,7 +866,7 @@ For inoculated plants of variety $1$, the odds of virus infection when nitrogen 
 #first relevel
 var3 <- relevel(fert.sim1$variety, "Var3")
 #then fit model with var3
-glm.refvar3 <- glm(cbind(infected, total) ~ block/var3 + var3*n.trt*status2,
+glm.refvar3 <- glm(cbind(infected, uninfected) ~ block/var3 + var3*n.trt*status2,
                family = quasibinomial, data = fert.sim1)
 #interpret results
 exp(coef(glm.refvar3)[11])
@@ -878,7 +879,7 @@ exp(confint(glm.refvar3, 12))
 #first relevel the status variable
 statuscntl <- relevel(fert.sim1$status2, "CNTL")
 #then fit model with var3
-glm.refvar3cntl <- glm(cbind(infected, total) ~ block/var3 + var3*n.trt*statuscntl,
+glm.refvar3cntl <- glm(cbind(infected, uninfected) ~ block/var3 + var3*n.trt*statuscntl,
                family = quasibinomial, data = fert.sim1)
 #interpret results
 exp(coef(glm.refvar3cntl)[11])
@@ -890,12 +891,12 @@ exp(confint(glm.refvar3cntl, 12))
 
 \noindent We would describe the nitrogen application effect for inoculated plants of variety $3$ as follows:
 \begin{quote}
-For inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be about equal to the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.191$ to $5.28$ times. For inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $1.24$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.269$ to $6.201$ times.
+For inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be about equal to the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.174$ to $5.763$ times. For inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $1.26$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.252$ to $6.910$ times.
 \end{quote}
 
 \noindent We would describe the nitrogen application effect for non-inoculated plants of variety $3$ as follows:
 \begin{quote}
-For non-inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be $2.3$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.797$ to $7.72$ times. For non-inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $1.45$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.446$ to $5.16$ times.
+For non-inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the early spring is estimated to be $2.49$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from  $0.817$ to $8.965$ times. For non-inoculated plants of variety $3$, the odds of virus infection when nitrogen is applied in the late spring is estimated to be $1.54$ times the odds of virus infection when nitrogen is applied in the fall, with a $95\%$ likelihood-based confidence interval from $0.444$ to $5.87$ times.
 \end{quote}
 
 
